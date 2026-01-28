@@ -2,6 +2,7 @@ import { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
+import PendaftaranPasien from "./pages/PendaftaranPasien";
 import Pendaftaran from "./pages/Pendaftaran";
 import DataPasien from "./pages/DataPasien";
 import AuditLog from "./pages/AuditLog";
@@ -35,6 +36,9 @@ export default function App() {
                 transition={{ duration: 0.3, ease: "easeOut" }}
               >
                 {active === "dashboard" && <Dashboard activeTab={active} />}
+                {active === "pendaftaranPasien" && (
+                  <PendaftaranPasien setActive={setActive} />
+                )}
                 {active === "pendaftaran" && <Pendaftaran />}
                 {active === "pasien" && (
                   <DataPasien
