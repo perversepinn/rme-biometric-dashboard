@@ -65,7 +65,7 @@ export default function PendaftaranPasien({ setActive }) {
             <div className="radar-ring"></div>
           </div>
 
-          <h3 className="text-2xl font-bold text-slate-700 mt-6">Scan Wajah (Opsional)</h3>
+          <h3 className="text-2xl font-bold text-slate-700 mt-6">Scan Wajah</h3>
           <p className="text-slate-500 max-w-sm leading-relaxed mt-4">
             Gunakan pemindaian wajah jika sidik jari gagal dikenali
             atau data tidak sesuai.
