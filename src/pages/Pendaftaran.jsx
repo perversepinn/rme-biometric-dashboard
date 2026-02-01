@@ -132,6 +132,7 @@ export default function Pendaftaran() {
   const [fingerVerified, setFingerVerified] = useState(false);
   const [faceVerified, setFaceVerified] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+const [showFaceModal, setShowFaceModal] = useState(false);
 
   const [form, setForm] = useState({
     noRM: "",
@@ -216,6 +217,7 @@ export default function Pendaftaran() {
     // 🔥 RESET STATUS BIOMETRIK
     setFingerVerified(false);
     setFaceVerified(false);
+setStartFaceScan(false);   // 🔥 penting
 
     // Tutup semua modal kalau masih terbuka
     setShowConfirmModal(false);
@@ -476,11 +478,16 @@ export default function Pendaftaran() {
               >
                 {/* CLOSE BUTTON */}
                 <button
-                  onClick={() => setShowModal(false)}
-                  className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
-                >
-                  <X className="w-6 h-6" />
-                </button>
+  onClick={() => {
+    setShowModal(false);
+    setStartFaceScan(false);   // 🔥 reset kamera
+    setFaceVerified(false);    // opsional: reset status wajah
+  }}
+  className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
+>
+  <X className="w-6 h-6" />
+</button>
+
 
                 {/* HEADER */}
                 <div className="mb-12 text-center">
@@ -524,92 +531,60 @@ export default function Pendaftaran() {
                           Scan Sidik Jari
                         </button>
                       </motion.div>
-                      {/* ====== WAJAH ====== */}
-                      <motion.div
-                        whileHover={!faceVerified ? { y: -6 } : {}}
-                        className="
-    border border-slate-200 rounded-3xl p-8
-    flex flex-col items-center gap-6
-    bg-gradient-to-br from-white to-slate-50
-    hover:border-blue-300 transition-all
-  "
-                      >
-                        {!faceVerified ? (
-                          <>
-                            {/* ===== PREVIEW (SEBELUM SCAN) ===== */}
-                            {!startFaceScan && (
-                              <>
-                                <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
-                                  {/* Pulse Ring */}
-                                  <motion.div
-                                    className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
-                                    animate={{
-                                      scale: [1, 1.15, 1],
-                                      opacity: [0.6, 0.2, 0.6],
-                                    }}
-                                    transition={{
-                                      duration: 2.2,
-                                      repeat: Infinity,
-                                      ease: "easeInOut",
-                                    }}
-                                  />
+                      
+{/* ====== WAJAH ====== */}
+<motion.div
+  whileHover={!faceVerified ? { y: -6 } : {}}
+  className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
+>
+  {!faceVerified ? (
+    <>
+      {/* ===== PREVIEW (SEBELUM SCAN) ===== */}
+      <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
+        <motion.div
+          className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
+          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.2, 0.6] }}
+          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
+        />
 
-                                  {/* Scan Line */}
-                                  <motion.div
-                                    className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
-                                    animate={{ y: [0, 176, 0] }}
-                                    transition={{
-                                      duration: 2.5,
-                                      repeat: Infinity,
-                                      ease: "linear",
-                                    }}
-                                  />
+        <motion.div
+          className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
+          animate={{ y: [0, 176, 0] }}
+          transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+        />
 
-                                  {/* Icon */}
-                                  <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
-                                </div>
+        <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
+      </div>
 
-                                <div className="w-full flex flex-col gap-3">
-                                  <button
-                                    onClick={() => setStartFaceScan(true)}
-                                    className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl"
-                                  >
-                                    Scan Wajah
-                                  </button>
-                                </div>
-                              </>
-                            )}
+      {/* TOMBOL INTERAKTIF */}
+      <motion.button
+        whileHover={{ scale: 1.04 }}
+        whileTap={{ scale: 0.97 }}
+        onClick={() => {
+          setShowModal(false);      // tutup modal biometrik utama
+          setShowFaceModal(true);   // buka modal kamera
+        }}
+        className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+      >
+        Scan Wajah
+      </motion.button>
 
-                            {/* ===== CAMERA (SETELAH KLIK) ===== */}
-                            {startFaceScan && (
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.95 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                className="w-full"
-                              >
-                                <FaceScanner
-                                  onComplete={() => setFaceVerified(true)}
-                                />
-                              </motion.div>
-                            )}
+      <p className="text-sm text-slate-500 text-center">
+        Gunakan kamera untuk verifikasi wajah pasien
+      </p>
+    </>
+  ) : (
+    <motion.div
+      initial={{ scale: 0.8, opacity: 0 }}
+      animate={{ scale: 1, opacity: 1 }}
+      className="flex items-center gap-2 text-green-600 font-semibold"
+    >
+      <CheckCircle className="w-6 h-6 animate-bounce" />
+      Wajah Terverifikasi
+    </motion.div>
+  )}
+</motion.div>
 
-                            <p className="text-sm text-slate-500 text-center">
-                              Arahkan wajah ke kamera dan ikuti instruksi (5x
-                              scan)
-                            </p>
-                          </>
-                        ) : (
-                          /* ===== SUCCESS ===== */
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="flex items-center gap-2 text-green-600 font-semibold"
-                          >
-                            <CheckCircle className="w-6 h-6 animate-bounce" />
-                            Wajah Terverifikasi
-                          </motion.div>
-                        )}
-                      </motion.div>
                     </div>
 
                     {/* TOMBOL VERIFIKASI */}
@@ -629,6 +604,64 @@ export default function Pendaftaran() {
             </motion.div>
           )}
         </AnimatePresence>
+        {/*modal proses scan  */}
+<AnimatePresence>
+  {showFaceModal && (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.92, opacity: 0, y: 50 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.92, opacity: 0, y: 50 }}
+        transition={{ type: "spring", damping: 22, stiffness: 260 }}
+        className="bg-white rounded-3xl w-full max-w-4xl p-6 sm:p-8 md:p-10 shadow-2xl relative"
+      >
+        {/* CLOSE BUTTON */}
+        <button
+          onClick={() => {
+            setShowFaceModal(false);
+            setStartFaceScan(false);
+          }}
+          className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+        >
+          <X className="w-6 h-6" />
+        </button>
+
+        {/* HEADER */}
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-slate-800">
+            Perekaman Wajah Pasien
+          </h2>
+          <p className="text-slate-500 mt-2">
+            Posisikan wajah di dalam kotak biru. Pastikan pencahayaan cukup dan hindari gerakan cepat.
+          </p>
+        </div>
+
+        {/* CAMERA FULL AREA */}
+        <div className="w-full">
+          <FaceScanner
+            onComplete={() => {
+              setFaceVerified(true);
+              setShowFaceModal(false);
+              setShowModal(true);
+            }}
+          />
+        </div>
+
+        {/* FOOTER NOTE */}
+        <p className="text-sm text-slate-500 text-center mt-5">
+          Sistem akan otomatis mengambil beberapa frame wajah untuk verifikasi
+        </p>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
 
         <AnimatePresence>
           {showConfirmModal && (
