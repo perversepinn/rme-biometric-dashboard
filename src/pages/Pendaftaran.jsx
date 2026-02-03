@@ -3,126 +3,10 @@ import { useState, useEffect } from "react";
 import Page from "../components/Page";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, Loader2, X, CheckCircle } from "lucide-react";
+import wilayah from "../data/wilayah.json";
 
-// ================= DATA WILAYAH =================
-const PROVINSI = [
-  "Aceh",
-  "Sumatera Utara",
-  "Sumatera Barat",
-  "Riau",
-  "Kepulauan Riau",
-  "Jambi",
-  "Sumatera Selatan",
-  "Bangka Belitung",
-  "Bengkulu",
-  "Lampung",
-  "DKI Jakarta",
-  "Jawa Barat",
-  "Jawa Tengah",
-  "DI Yogyakarta",
-  "Jawa Timur",
-  "Banten",
-  "Bali",
-  "Nusa Tenggara Barat",
-  "Nusa Tenggara Timur",
-  "Kalimantan Barat",
-  "Kalimantan Tengah",
-  "Kalimantan Selatan",
-  "Kalimantan Timur",
-  "Kalimantan Utara",
-  "Sulawesi Utara",
-  "Sulawesi Tengah",
-  "Sulawesi Selatan",
-  "Sulawesi Tenggara",
-  "Gorontalo",
-  "Sulawesi Barat",
-  "Maluku",
-  "Maluku Utara",
-  "Papua",
-  "Papua Barat",
-];
 
-const KOTA_MADURA = ["Bangkalan", "Sampang", "Pamekasan", "Sumenep"];
 
-const KECAMATAN_BY_KOTA = {
-  Bangkalan: [
-    "Bangkalan",
-    "Arosbaya",
-    "Burneh",
-    "Galis",
-    "Geger",
-    "Kamal",
-    "Klampis",
-    "Konang",
-    "Kwanyar",
-    "Labang",
-    "Modung",
-    "Sepulu",
-    "Socah",
-    "Tanah Merah",
-    "Tanjung Bumi",
-    "Tragah",
-  ],
-  Sampang: [
-    "Sampang",
-    "Banyuates",
-    "Camplong",
-    "Jrengik",
-    "Karang Penang",
-    "Kedungdung",
-    "Ketapang",
-    "Omben",
-    "Pangarengan",
-    "Robatal",
-    "Sokobanah",
-    "Tambelangan",
-    "Torjun",
-  ],
-  Pamekasan: [
-    "Pamekasan",
-    "Batumarmar",
-    "Galis",
-    "Kadur",
-    "Larangan",
-    "Palengaan",
-    "Pasean",
-    "Pegantenan",
-    "Pademawu",
-    "Pakong",
-    "Proppo",
-    "Tlanakan",
-    "Waru",
-  ],
-  Sumenep: [
-    "Sumenep",
-    "Ambunten",
-    "Arjasa",
-    "Batang-Batang",
-    "Batuan",
-    "Batuputih",
-    "Bluto",
-    "Dasuk",
-    "Dungkek",
-    "Ganding",
-    "Gapura",
-    "Gayam",
-    "Giligenting",
-    "Guluk-Guluk",
-    "Kalianget",
-    "Kangayan",
-    "Lenteng",
-    "Manding",
-    "Masalembu",
-    "Nonggunong",
-    "Pasongsongan",
-    "Pragaan",
-    "Ra'as",
-    "Rubaru",
-    "Sapeken",
-    "Saronggi",
-    "Talango",
-  ],
-};
 
 export default function Pendaftaran() {
   const [startFaceScan, setStartFaceScan] = useState(false);
@@ -160,6 +44,32 @@ const [showFaceModal, setShowFaceModal] = useState(false);
     catatan: "",
   });
 
+// ================= DATA WILAYAH =================
+const [provList] = useState(wilayah);
+const [kotaList, setKotaList] = useState([]);
+const [kecamatanList, setKecamatanList] = useState([]);
+
+const getProvinsiName = (code) => {
+  const prov = wilayah.find(p => p.code === code);
+  return prov ? prov.name : code;
+};
+
+const getKotaName = (provCode, kotaCode) => {
+  const prov = wilayah.find(p => p.code === provCode);
+  if (!prov) return kotaCode;
+  const kota = prov.regencies.find(k => k.code === kotaCode);
+  return kota ? kota.name : kotaCode;
+};
+
+const getKecamatanName = (provCode, kotaCode, kecCode) => {
+  const prov = wilayah.find(p => p.code === provCode);
+  if (!prov) return kecCode;
+  const kota = prov.regencies.find(k => k.code === kotaCode);
+  if (!kota) return kecCode;
+  const kec = kota.districts.find(d => d.code === kecCode);
+  return kec ? kec.name : kecCode;
+};
+
   // ================= AUTO GENERATE NO RM =================
   useEffect(() => {
     const randomRM = "RM-" + Math.floor(100000 + Math.random() * 900000);
@@ -178,14 +88,40 @@ const [showFaceModal, setShowFaceModal] = useState(false);
     }
   }, [form.tanggalLahir]);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setForm((prev) => ({
+const handleChange = (e) => {
+  const { name, value } = e.target;
+
+  if (name === "provinsi") {
+    const selectedProv = provList.find(p => p.code === value);
+    setKotaList(selectedProv ? selectedProv.regencies : []);
+    setKecamatanList([]);
+    setForm(prev => ({
       ...prev,
-      [name]: value,
-      ...(name === "kota" ? { kecamatan: "" } : {}),
+      provinsi: value,
+      kota: "",
+      kecamatan: ""
     }));
-  };
+    return;
+  }
+
+  if (name === "kota") {
+    const selectedKota = kotaList.find(k => k.code === value);
+    setKecamatanList(selectedKota ? selectedKota.districts : []);
+    setForm(prev => ({
+      ...prev,
+      kota: value,
+      kecamatan: ""
+    }));
+    return;
+  }
+
+  setForm(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
+
+
 
   const handleReset = () => {
     setForm({
@@ -335,15 +271,55 @@ setStartFaceScan(false);   // 🔥 penting
               value={form.alamat}
               onChange={handleChange}
             />
-            {dropdown("provinsi", "Provinsi", PROVINSI)}
+            <div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">Provinsi</label>
+  <select
+    name="provinsi"
+    value={form.provinsi}
+    onChange={handleChange}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Provinsi</option>
+    {provList.map(p => (
+      <option key={p.code} value={p.code}>{p.name}</option>
+    ))}
+  </select>
+</div>
 
-            {dropdown("kota", "Kota", KOTA_MADURA)}
 
-            {dropdown(
-              "kecamatan",
-              "Kecamatan",
-              form.kota ? KECAMATAN_BY_KOTA[form.kota] : [],
-            )}
+           <div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">Kota / Kabupaten</label>
+  <select
+    name="kota"
+    value={form.kota}
+    onChange={handleChange}
+    disabled={!kotaList.length}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Kota/Kabupaten</option>
+    {kotaList.map(k => (
+      <option key={k.code} value={k.code}>{k.name}</option>
+    ))}
+  </select>
+</div>
+
+
+            <div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">Kecamatan</label>
+  <select
+    name="kecamatan"
+    value={form.kecamatan}
+    onChange={handleChange}
+    disabled={!kecamatanList.length}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Kecamatan</option>
+    {kecamatanList.map(kec => (
+      <option key={kec.code} value={kec.code}>{kec.name}</option>
+    ))}
+  </select>
+</div>
+
 
             <Input
               label="No. Telepon"
@@ -704,19 +680,33 @@ setStartFaceScan(false);   // 🔥 penting
 
                 {/* DATA PASIEN */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  {Object.entries(form).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className="flex justify-between border-b py-2"
-                    >
-                      <span className="text-slate-500 capitalize">
-                        {key.replace(/([A-Z])/g, " $1")}
-                      </span>
-                      <span className="font-semibold text-slate-700">
-                        {value || "-"}
-                      </span>
-                    </div>
-                  ))}
+                 {Object.entries(form).map(([key, value]) => {
+  let displayValue = value || "-";
+
+  if (key === "provinsi") {
+    displayValue = getProvinsiName(form.provinsi);
+  }
+
+  if (key === "kota") {
+    displayValue = getKotaName(form.provinsi, form.kota);
+  }
+
+  if (key === "kecamatan") {
+    displayValue = getKecamatanName(form.provinsi, form.kota, form.kecamatan);
+  }
+
+  return (
+    <div key={key} className="flex justify-between border-b py-2">
+      <span className="text-slate-500 capitalize">
+        {key.replace(/([A-Z])/g, " $1")}
+      </span>
+      <span className="font-semibold text-slate-700">
+        {displayValue}
+      </span>
+    </div>
+  );
+})}
+
                 </div>
 
                 <div className="flex gap-4 mt-8">
@@ -729,10 +719,24 @@ setStartFaceScan(false);   // 🔥 penting
 
                   <button
                     onClick={() => {
-                      setShowConfirmModal(false);
-                      alert("Pendaftaran pasien berhasil disimpan!");
-                      handleReset();
-                    }}
+  // 🔄 Konversi kode wilayah jadi nama
+  const dataUntukDB = {
+    ...form,
+    provinsi: getProvinsiName(form.provinsi),
+    kota: getKotaName(form.provinsi, form.kota),
+    kecamatan: getKecamatanName(form.provinsi, form.kota, form.kecamatan),
+  };
+
+  console.log("Data dikirim ke database:", dataUntukDB);
+
+  // NANTI DI SINI KAMU KIRIM KE BACKEND / API
+  // await fetch("/api/pasien", { method: "POST", body: JSON.stringify(dataUntukDB) })
+
+  setShowConfirmModal(false);
+  alert("Pendaftaran pasien berhasil disimpan!");
+  handleReset();
+}}
+
                     className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                   >
                     Simpan & Daftarkan
