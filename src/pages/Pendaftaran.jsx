@@ -17,6 +17,7 @@ export default function Pendaftaran() {
   const [faceVerified, setFaceVerified] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 const [showFaceModal, setShowFaceModal] = useState(false);
+const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   const [form, setForm] = useState({
     noRM: "",
@@ -125,7 +126,6 @@ const handleChange = (e) => {
 
   const handleReset = () => {
     setForm({
-      noRM: "",
       nama: "",
       tempatLahir: "",
       tanggalLahir: "",
@@ -732,9 +732,8 @@ setStartFaceScan(false);   // 🔥 penting
   // NANTI DI SINI KAMU KIRIM KE BACKEND / API
   // await fetch("/api/pasien", { method: "POST", body: JSON.stringify(dataUntukDB) })
 
-  setShowConfirmModal(false);
-  alert("Pendaftaran pasien berhasil disimpan!");
-  handleReset();
+setShowConfirmModal(false);
+setShowSuccessModal(true);
 }}
 
                     className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
@@ -747,6 +746,45 @@ setStartFaceScan(false);   // 🔥 penting
           )}
         </AnimatePresence>
       </div>
+      <AnimatePresence>
+  {showSuccessModal && (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.8, opacity: 0, y: 40 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.8, opacity: 0, y: 40 }}
+        transition={{ type: "spring", damping: 18, stiffness: 260 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center"
+      >
+        <div className="flex justify-center mb-4">
+          <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+          Pendaftaran Berhasil
+        </h2>
+        <p className="text-slate-500 mb-6">
+          Data pasien berhasil disimpan ke sistem.
+        </p>
+
+        <button
+          onClick={() => {
+            setShowSuccessModal(false);
+            handleReset(); // reset setelah tutup modal
+          }}
+          className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition"
+        >
+          Tutup
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
     </Page>
   );
 }
