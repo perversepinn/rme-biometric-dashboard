@@ -2,10 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import * as faceapi from "face-api.js";
 import { motion } from "framer-motion";
 
-export default function FaceScanner({ onComplete }) {
+export default function FaceScanner({ onComplete, mode = "register" }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
   const cooldownRef = useRef(false);
+  
+const maxPose = mode === "verify" ? 1 : 5;
 
   const [faceDetected, setFaceDetected] = useState(false);
   const [faceCentered, setFaceCentered] = useState(false);
@@ -28,9 +30,11 @@ export default function FaceScanner({ onComplete }) {
     const loadModels = async () => {
       const MODEL_URL = "/models";
       await Promise.all([
-        faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
-        faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
-      ]);
+  faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
+  faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+  faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+]);
+
       setReady(true);
     };
     loadModels();
@@ -115,27 +119,30 @@ export default function FaceScanner({ onComplete }) {
       const noseToChin = chin.y - nose.y;
       const pitch = noseToChin / eyeToNose;
 
-      let poseCorrect = false;
+      let poseCorrect = true;
 
-      switch (count) {
-        case 0: // lurus
-          poseCorrect = Math.abs(yaw) < 0.25 && pitch > 0.7 && pitch < 1.6;
-          break;
-        case 1: // kiri pasien
-          poseCorrect = yaw < -0.12;
-          break;
-        case 2: // kanan pasien
-          poseCorrect = yaw > 0.12;
-          break;
-        case 3: // bawah (dagu turun)
-          poseCorrect = pitch > 1.25;
-          break;
-        case 4: // atas (dagu naik)
-          poseCorrect = pitch < 0.85;
-          break;
-        default:
-          break;
-      }
+if (mode === "register") {
+  switch (count) {
+    case 0:
+      poseCorrect = Math.abs(yaw) < 0.25 && pitch > 0.7 && pitch < 1.6;
+      break;
+    case 1:
+      poseCorrect = yaw < -0.12;
+      break;
+    case 2:
+      poseCorrect = yaw > 0.12;
+      break;
+    case 3:
+      poseCorrect = pitch > 1.25;
+      break;
+    case 4:
+      poseCorrect = pitch < 0.85;
+      break;
+    default:
+      break;
+  }
+}
+
 
       if (!poseCorrect) {
         setFaceStable(false);
@@ -159,7 +166,10 @@ export default function FaceScanner({ onComplete }) {
       if (!stableStartTime) stableStartTime = Date.now();
       const stableDuration = Date.now() - stableStartTime;
 
-      if (stableDuration >= 2000) {
+      const requiredStableTime = mode === "verify" ? 700 : 2000;
+
+if (stableDuration >= requiredStableTime)
+ {
         setFaceStable(true);
         setScanning(true);
 
@@ -179,12 +189,31 @@ export default function FaceScanner({ onComplete }) {
   }, [ready, count]);
 
   // ================= COMPLETE =================
-  useEffect(() => {
-    if (count === 5) {
+useEffect(() => {
+  const finalize = async () => {
+    if (count === maxPose && videoRef.current) {
+      const detection = await faceapi
+        .detectSingleFace(videoRef.current)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) return;
+
+      const descriptor = Array.from(detection.descriptor);
+
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      onComplete();
+
+      onComplete(descriptor);
     }
-  }, [count, onComplete]);
+  };
+
+  finalize();
+}, [count, onComplete]);
+
+const activePoseList =
+  mode === "verify"
+    ? ["Hadap lurus ke kamera"]
+    : poseList;
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -225,7 +254,7 @@ export default function FaceScanner({ onComplete }) {
         )}
 
         <div className="absolute top-4 left-1/2 -translate-x-1/2 bg-black/40 px-4 py-2 rounded-full text-white text-sm backdrop-blur-sm">
-          Scan wajah: {count} / 5
+          Scan wajah: {count} / {maxPose}
         </div>
 
         <p className="absolute bottom-10 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">

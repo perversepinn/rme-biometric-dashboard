@@ -1,19 +1,59 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, CheckCircle } from "lucide-react";
+import FaceScanner from "../components/FaceScanner";
+import * as faceapi from "face-api.js";
 
 export default function PendaftaranPasien({ setActive }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+const [showScanning, setShowScanning] = useState(false);
+const [detectedPatient, setDetectedPatient] = useState(null);
 
   const beep = new Audio("/beep.mp3");
 
-  const startFaceScan = () => {
-    setTimeout(() => {
-      beep.play();
-      setShowConfirm(true);
-    }, 2000);
-  };
+const startFaceScan = () => {
+  setShowScanning(true);
+};
+
+const handleFaceMatch = (patientData) => {
+  beep.play();
+  setDetectedPatient(patientData);
+  setShowScanning(false);
+  setShowConfirm(true);
+};
+const handleFaceNotFound = () => {
+  setShowScanning(false);
+  alert("Wajah tidak terdaftar");
+};
+
+
+const handleFaceComplete = (descriptor) => {
+  let matched = null;
+
+  for (let patient of faceDatabase) {
+    const distance = faceapi.euclideanDistance(
+      new Float32Array(descriptor),
+      new Float32Array(patient.descriptor)
+    );
+
+    if (distance < 0.5) {
+      matched = patient;
+      break;
+    }
+  }
+
+  if (matched) {
+    beep.play();
+    setDetectedPatient(matched);
+    setShowScanning(false);
+    setShowConfirm(true);
+  } else {
+    setShowScanning(false);
+    alert("Wajah tidak terdaftar");
+  }
+};
+
 
   const dummyPatient = {
     nama: "Siti Aminah",
@@ -79,6 +119,41 @@ export default function PendaftaranPasien({ setActive }) {
           </button>
         </div>
       </div>
+{/* MODAL SCANNING WAJAH */}
+<AnimatePresence>
+  {showScanning && (
+    <motion.div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.85 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.85 }}
+        className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-2xl"
+      >
+        <h2 className="text-lg font-bold mb-4 text-center">
+          Scan Wajah Pasien
+        </h2>
+
+        <FaceScanner 
+  mode="verify"
+  onComplete={handleFaceComplete}
+/>
+
+        <button
+          onClick={() => setShowScanning(false)}
+          className="mt-4 w-full py-2 border rounded-xl"
+        >
+          Batal
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
 
       {/* MODAL KONFIRMASI */}
       <AnimatePresence>
@@ -96,7 +171,9 @@ export default function PendaftaranPasien({ setActive }) {
               </h2>
 
               <div className="space-y-3 text-sm">
-                {Object.entries(dummyPatient).map(([key, value]) => (
+                {detectedPatient &&
+  Object.entries(detectedPatient).map(([key, value]) => (
+
                   <div key={key} className="flex justify-between border-b pb-2">
                     <span className="text-slate-500 capitalize">{key}</span>
                     <span className="font-semibold text-slate-700">{value}</span>
