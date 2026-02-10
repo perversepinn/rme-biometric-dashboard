@@ -1,12 +1,59 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, CheckCircle } from "lucide-react";
-import FaceScannerModal from "../components/FaceScannerModal";
+import FaceScanner from "../components/FaceScanner";
+import * as faceapi from "face-api.js";
 
 export default function PendaftaranPasien({ setActive }) {
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [showFaceScanner, setShowFaceScanner] = useState(false);
+const [showScanning, setShowScanning] = useState(false);
+const [detectedPatient, setDetectedPatient] = useState(null);
+
+  const beep = new Audio("/beep.mp3");
+
+const startFaceScan = () => {
+  setShowScanning(true);
+};
+
+const handleFaceMatch = (patientData) => {
+  beep.play();
+  setDetectedPatient(patientData);
+  setShowScanning(false);
+  setShowConfirm(true);
+};
+const handleFaceNotFound = () => {
+  setShowScanning(false);
+  alert("Wajah tidak terdaftar");
+};
+
+
+const handleFaceComplete = (descriptor) => {
+  let matched = null;
+
+  for (let patient of faceDatabase) {
+    const distance = faceapi.euclideanDistance(
+      new Float32Array(descriptor),
+      new Float32Array(patient.descriptor)
+    );
+
+    if (distance < 0.5) {
+      matched = patient;
+      break;
+    }
+  }
+
+  if (matched) {
+    beep.play();
+    setDetectedPatient(matched);
+    setShowScanning(false);
+    setShowConfirm(true);
+  } else {
+    setShowScanning(false);
+    alert("Wajah tidak terdaftar");
+  }
+};
+
 
   const dummyPatient = {
     nama: "Siti Aminah",
@@ -17,116 +64,106 @@ export default function PendaftaranPasien({ setActive }) {
   };
 
   return (
-    <div className="space-y-10">
-      {/* HEADER */}
+    <div className="space-y-8">
       <div>
-        <h2 className="text-3xl font-extrabold text-slate-800">
-          Pendaftaran Pasien
-        </h2>
-        <p className="text-slate-500">
-          Identifikasi biometrik untuk validasi data pasien.
-        </p>
+        <h2 className="text-2xl font-bold text-slate-800">Pendaftaran Pasien</h2>
+        <p className="text-slate-500">Silakan lakukan identifikasi biometrik pasien.</p>
       </div>
 
-      {/* KONTEN UTAMA */}
-      <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-blue-100 h-[72vh] rounded-[2rem] overflow-hidden shadow-xl bg-white">
-        {/* ================= SIDIK JARI ================= */}
-        <div className="flex flex-col items-center text-center px-14 pt-20 relative">
-          {/* BREATHING GLOW */}
-          <div className="absolute inset-0 flex justify-center items-start pointer-events-none">
-            <div className="w-72 h-72 bg-blue-500/10 rounded-full blur-3xl animate-pulse" />
-          </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 divide-x divide-blue-100 h-[70vh] rounded-3xl overflow-hidden shadow-lg bg-white">
 
-          <div className="relative w-40 h-40 flex items-center justify-center mb-8">
-            <div className="fingerprint-glow"></div>
-            <motion.div
-              animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 2.5, repeat: Infinity }}
-            >
-              <Fingerprint className="w-24 h-24 fingerprint-icon relative z-10" />
-            </motion.div>
-          </div>
+{/* SIDIK JARI */}
+<div className="flex flex-col items-center text-center px-12 pt-16">
 
-          <h3 className="text-2xl font-bold text-blue-700">Scan Sidik Jari</h3>
+  <div className="relative w-36 h-36 flex items-center justify-center mb-6">
 
-          <p className="text-slate-500 max-w-sm leading-relaxed mt-4">
-            Tempelkan sidik jari pasien pada alat pemindai. Sistem akan
-            mendeteksi secara otomatis.
-          </p>
+    {/* Lingkaran glow */}
+    <div className="fingerprint-glow"></div>
 
-          <span className="mt-6 inline-flex items-center gap-2 text-blue-600 text-sm font-medium">
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
-            Scanner Aktif
-          </span>
-        </div>
+    {/* Icon */}
+    <Fingerprint className="w-20 h-20 fingerprint-icon relative z-10" />
 
-        {/* ================= SCAN WAJAH ================= */}
-        <div className="flex flex-col items-center text-center px-14 pt-20 relative">
-          {/* BREATHING GLOW */}
-          <div className="absolute inset-0 flex justify-center items-start pointer-events-none">
-            <div className="w-72 h-72 bg-slate-400/10 rounded-full blur-3xl animate-pulse" />
-          </div>
+  </div>
 
-          <div className="relative w-36 h-36 mb-8 flex items-center justify-center">
-            <motion.div
-              animate={{ opacity: [0.6, 1, 0.6] }}
-              transition={{ duration: 2, repeat: Infinity }}
-            >
-              <ScanFace className="w-24 h-24 text-slate-400 relative z-10" />
-            </motion.div>
+  <h3 className="text-2xl font-bold text-blue-700 mt-4">Scan Sidik Jari</h3>
 
-            {/* SCAN LINE */}
+  <p className="text-slate-500 max-w-sm leading-relaxed mt-4">
+    Silakan tempelkan sidik jari pasien pada alat pemindai.
+    Sistem akan otomatis mendeteksi dan menampilkan data pasien.
+  </p>
+
+  <p className="text-blue-500 text-sm mt-4 animate-pulse">● Scanner Aktif</p>
+</div>
+
+
+
+        {/* SCAN WAJAH */}
+        <div className="flex flex-col items-center text-center px-12 pt-16">
+          <div className="relative flex items-center justify-center w-32 h-32 mb-6">
+            <ScanFace className="w-20 h-20 text-slate-400 relative z-10" />
             <div className="scan-line"></div>
-
-            {/* RADAR */}
-            <motion.div
-              className="radar-ring"
-              animate={{ rotate: 360 }}
-              transition={{ duration: 6, repeat: Infinity, ease: "linear" }}
-            />
+            <div className="radar-ring"></div>
           </div>
 
-          <h3 className="text-2xl font-bold text-slate-700">Scan Wajah</h3>
-
+          <h3 className="text-2xl font-bold text-slate-700 mt-6">Scan Wajah</h3>
           <p className="text-slate-500 max-w-sm leading-relaxed mt-4">
-            Digunakan jika sidik jari gagal atau data perlu diverifikasi ulang.
+            Gunakan pemindaian wajah jika sidik jari gagal dikenali
+            atau data tidak sesuai.
           </p>
 
-          <motion.button
-            onClick={() => setShowFaceScanner(true)}
-            animate={{ y: [0, -4, 0] }}
-            transition={{ duration: 3, repeat: Infinity }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            className="mt-10 px-10 py-4 bg-blue-600 text-white rounded-2xl font-semibold shadow-xl hover:bg-blue-700"
+          <button
+            onClick={startFaceScan}
+            className="mt-10 px-8 py-4 bg-blue-600 text-white rounded-2xl font-semibold shadow-lg hover:bg-blue-700 transition"
           >
             Mulai Scan Wajah
-          </motion.button>
+          </button>
         </div>
       </div>
+{/* MODAL SCANNING WAJAH */}
+<AnimatePresence>
+  {showScanning && (
+    <motion.div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.85 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.85 }}
+        className="bg-white rounded-3xl p-6 w-full max-w-2xl shadow-2xl"
+      >
+        <h2 className="text-lg font-bold mb-4 text-center">
+          Scan Wajah Pasien
+        </h2>
 
-      {/* FACE SCANNER MODAL */}
-      <FaceScannerModal
-        open={showFaceScanner}
-        onClose={() => setShowFaceScanner(false)}
-        onComplete={() => {
-          setShowFaceScanner(false);
-          setShowConfirm(true);
-        }}
-      />
+        <FaceScanner 
+  mode="verify"
+  onComplete={handleFaceComplete}
+/>
 
-      {/* ================= MODAL KONFIRMASI ================= */}
+        <button
+          onClick={() => setShowScanning(false)}
+          className="mt-4 w-full py-2 border rounded-xl"
+        >
+          Batal
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
+      {/* MODAL KONFIRMASI */}
       <AnimatePresence>
         {showConfirm && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-40"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
               className="bg-white rounded-3xl p-10 w-full max-w-lg shadow-2xl"
             >
               <h2 className="text-xl font-bold text-slate-800 mb-6 text-center">
@@ -134,26 +171,22 @@ export default function PendaftaranPasien({ setActive }) {
               </h2>
 
               <div className="space-y-3 text-sm">
-                {Object.entries(dummyPatient).map(([k, v]) => (
-                  <div key={k} className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500 capitalize">{k}</span>
-                    <span className="font-semibold text-slate-700">{v}</span>
+                {detectedPatient &&
+  Object.entries(detectedPatient).map(([key, value]) => (
+
+                  <div key={key} className="flex justify-between border-b pb-2">
+                    <span className="text-slate-500 capitalize">{key}</span>
+                    <span className="font-semibold text-slate-700">{value}</span>
                   </div>
                 ))}
               </div>
 
               <div className="flex gap-4 mt-8">
-                <button
-                  onClick={() => setShowConfirm(false)}
-                  className="flex-1 py-3 border rounded-xl font-semibold hover:bg-slate-50"
-                >
+                <button onClick={() => setShowConfirm(false)} className="flex-1 py-3 border rounded-xl font-semibold">
                   Batal
                 </button>
                 <button
-                  onClick={() => {
-                    setShowConfirm(false);
-                    setShowSuccess(true);
-                  }}
+                  onClick={() => { setShowConfirm(false); setShowSuccess(true); }}
                   className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                 >
                   Data Benar
@@ -164,40 +197,109 @@ export default function PendaftaranPasien({ setActive }) {
         )}
       </AnimatePresence>
 
-      {/* ================= MODAL SUKSES ================= */}
+      {/* MODAL SUKSES */}
       <AnimatePresence>
         {showSuccess && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-40"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-          >
+          <motion.div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
+              initial={{ scale: 0.85, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.85, opacity: 0 }}
               className="bg-white rounded-3xl p-10 text-center shadow-2xl max-w-md w-full"
             >
               <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-              <h2 className="text-xl font-bold text-slate-800 mb-2">
-                Pasien Berhasil Ditambahkan
-              </h2>
-              <p className="text-slate-500 mb-6">
-                Data pasien telah tersimpan ke sistem RME.
-              </p>
+              <h2 className="text-xl font-bold text-slate-800 mb-2">Pasien Berhasil Ditambahkan</h2>
+              <p className="text-slate-500 mb-6">Data pasien telah tersimpan ke sistem RME.</p>
               <button
-                onClick={() => {
-                  setShowSuccess(false);
-                  setActive("pasien");
-                }}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
-              >
-                Tutup
-              </button>
+  onClick={() => {
+    setShowSuccess(false);
+    setTimeout(() => {
+      setActive("pasien"); // 🔥 pindah ke halaman Data Pasien
+    }, 300);
+  }}
+  className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+>
+  Tutup
+</button>
+
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* CSS ANIMASI */}
+      <style>{`
+        @keyframes scanFace {
+          0% { top: 5%; opacity: 0.3; }
+          50% { top: 85%; opacity: 1; }
+          100% { top: 5%; opacity: 0.3; }
+        }
+        .scan-line {
+          position: absolute;
+          left: 15%;
+          right: 15%;
+          height: 3px;
+          background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+          animation: scanFace 2s linear infinite;
+        }
+
+        @keyframes glowPulse {
+          0% { transform: scale(0.95); opacity: 0.5; }
+          50% { transform: scale(1.05); opacity: 0.2; }
+          100% { transform: scale(0.95); opacity: 0.5; }
+        }
+        .fingerprint-glow {
+          position: absolute;
+          width: 110px;
+          height: 110px;
+          border-radius: 50%;
+          background: radial-gradient(circle, rgba(59,130,246,0.4) 0%, transparent 70%);
+          animation: glowPulse 2s infinite;
+        }
+
+        @keyframes radarSpin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        .radar-ring {
+          position: absolute;
+          width: 120px;
+          height: 120px;
+          border: 2px dashed rgba(59,130,246,0.4);
+          border-radius: 50%;
+          animation: radarSpin 6s linear infinite;
+        }
+/* GLOW LINGKARAN (ukuran disamakan dengan wajah) */
+@keyframes glowPulse {
+  0% { opacity: 0.45; }
+  50% { opacity: 0.2; }
+  100% { opacity: 0.45; }
+}
+
+.fingerprint-glow {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  border: 2px solid rgba(59,130,246,0.35);
+  background: radial-gradient(circle, rgba(59,130,246,0.25) 0%, transparent 70%);
+  animation: glowPulse 2s ease-in-out infinite;
+}
+
+/* ICON BERDENYUT WARNA SAJA */
+@keyframes fingerprintColorPulse {
+  0% { color: #2563eb; }
+  50% { color: #60a5fa; }
+  100% { color: #2563eb; }
+}
+
+.fingerprint-icon {
+  animation: fingerprintColorPulse 1.6s ease-in-out infinite;
+}
+
+
+      `}</style>
     </div>
   );
 }
