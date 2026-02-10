@@ -5,9 +5,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, Loader2, X, CheckCircle } from "lucide-react";
 import wilayah from "../data/wilayah.json";
 
-
-
-
 export default function Pendaftaran() {
   const [startFaceScan, setStartFaceScan] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -16,8 +13,9 @@ export default function Pendaftaran() {
   const [fingerVerified, setFingerVerified] = useState(false);
   const [faceVerified, setFaceVerified] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-const [showFaceModal, setShowFaceModal] = useState(false);
-const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showFaceModal, setShowFaceModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [faceDescriptor, setFaceDescriptor] = useState(null);
 
   const [form, setForm] = useState({
     noRM: "",
@@ -45,31 +43,31 @@ const [showSuccessModal, setShowSuccessModal] = useState(false);
     catatan: "",
   });
 
-// ================= DATA WILAYAH =================
-const [provList] = useState(wilayah);
-const [kotaList, setKotaList] = useState([]);
-const [kecamatanList, setKecamatanList] = useState([]);
+  // ================= DATA WILAYAH =================
+  const [provList] = useState(wilayah);
+  const [kotaList, setKotaList] = useState([]);
+  const [kecamatanList, setKecamatanList] = useState([]);
 
-const getProvinsiName = (code) => {
-  const prov = wilayah.find(p => p.code === code);
-  return prov ? prov.name : code;
-};
+  const getProvinsiName = (code) => {
+    const prov = wilayah.find((p) => p.code === code);
+    return prov ? prov.name : code;
+  };
 
-const getKotaName = (provCode, kotaCode) => {
-  const prov = wilayah.find(p => p.code === provCode);
-  if (!prov) return kotaCode;
-  const kota = prov.regencies.find(k => k.code === kotaCode);
-  return kota ? kota.name : kotaCode;
-};
+  const getKotaName = (provCode, kotaCode) => {
+    const prov = wilayah.find((p) => p.code === provCode);
+    if (!prov) return kotaCode;
+    const kota = prov.regencies.find((k) => k.code === kotaCode);
+    return kota ? kota.name : kotaCode;
+  };
 
-const getKecamatanName = (provCode, kotaCode, kecCode) => {
-  const prov = wilayah.find(p => p.code === provCode);
-  if (!prov) return kecCode;
-  const kota = prov.regencies.find(k => k.code === kotaCode);
-  if (!kota) return kecCode;
-  const kec = kota.districts.find(d => d.code === kecCode);
-  return kec ? kec.name : kecCode;
-};
+  const getKecamatanName = (provCode, kotaCode, kecCode) => {
+    const prov = wilayah.find((p) => p.code === provCode);
+    if (!prov) return kecCode;
+    const kota = prov.regencies.find((k) => k.code === kotaCode);
+    if (!kota) return kecCode;
+    const kec = kota.districts.find((d) => d.code === kecCode);
+    return kec ? kec.name : kecCode;
+  };
 
   // ================= AUTO GENERATE NO RM =================
   useEffect(() => {
@@ -89,40 +87,38 @@ const getKecamatanName = (provCode, kotaCode, kecCode) => {
     }
   }, [form.tanggalLahir]);
 
-const handleChange = (e) => {
-  const { name, value } = e.target;
+  const handleChange = (e) => {
+    const { name, value } = e.target;
 
-  if (name === "provinsi") {
-    const selectedProv = provList.find(p => p.code === value);
-    setKotaList(selectedProv ? selectedProv.regencies : []);
-    setKecamatanList([]);
-    setForm(prev => ({
+    if (name === "provinsi") {
+      const selectedProv = provList.find((p) => p.code === value);
+      setKotaList(selectedProv ? selectedProv.regencies : []);
+      setKecamatanList([]);
+      setForm((prev) => ({
+        ...prev,
+        provinsi: value,
+        kota: "",
+        kecamatan: "",
+      }));
+      return;
+    }
+
+    if (name === "kota") {
+      const selectedKota = kotaList.find((k) => k.code === value);
+      setKecamatanList(selectedKota ? selectedKota.districts : []);
+      setForm((prev) => ({
+        ...prev,
+        kota: value,
+        kecamatan: "",
+      }));
+      return;
+    }
+
+    setForm((prev) => ({
       ...prev,
-      provinsi: value,
-      kota: "",
-      kecamatan: ""
+      [name]: value,
     }));
-    return;
-  }
-
-  if (name === "kota") {
-    const selectedKota = kotaList.find(k => k.code === value);
-    setKecamatanList(selectedKota ? selectedKota.districts : []);
-    setForm(prev => ({
-      ...prev,
-      kota: value,
-      kecamatan: ""
-    }));
-    return;
-  }
-
-  setForm(prev => ({
-    ...prev,
-    [name]: value
-  }));
-};
-
-
+  };
 
   const handleReset = () => {
     setForm({
@@ -153,7 +149,7 @@ const handleChange = (e) => {
     // 🔥 RESET STATUS BIOMETRIK
     setFingerVerified(false);
     setFaceVerified(false);
-setStartFaceScan(false);   // 🔥 penting
+    setStartFaceScan(false); // 🔥 penting
 
     // Tutup semua modal kalau masih terbuka
     setShowConfirmModal(false);
@@ -272,54 +268,63 @@ setStartFaceScan(false);   // 🔥 penting
               onChange={handleChange}
             />
             <div className="flex flex-col gap-2">
-  <label className="text-sm font-bold text-slate-700 ml-1">Provinsi</label>
-  <select
-    name="provinsi"
-    value={form.provinsi}
-    onChange={handleChange}
-    className="rounded-xl border px-5 py-3.5"
-  >
-    <option value="">Pilih Provinsi</option>
-    {provList.map(p => (
-      <option key={p.code} value={p.code}>{p.name}</option>
-    ))}
-  </select>
-</div>
-
-
-           <div className="flex flex-col gap-2">
-  <label className="text-sm font-bold text-slate-700 ml-1">Kota / Kabupaten</label>
-  <select
-    name="kota"
-    value={form.kota}
-    onChange={handleChange}
-    disabled={!kotaList.length}
-    className="rounded-xl border px-5 py-3.5"
-  >
-    <option value="">Pilih Kota/Kabupaten</option>
-    {kotaList.map(k => (
-      <option key={k.code} value={k.code}>{k.name}</option>
-    ))}
-  </select>
-</div>
-
+              <label className="text-sm font-bold text-slate-700 ml-1">
+                Provinsi
+              </label>
+              <select
+                name="provinsi"
+                value={form.provinsi}
+                onChange={handleChange}
+                className="rounded-xl border px-5 py-3.5"
+              >
+                <option value="">Pilih Provinsi</option>
+                {provList.map((p) => (
+                  <option key={p.code} value={p.code}>
+                    {p.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="flex flex-col gap-2">
-  <label className="text-sm font-bold text-slate-700 ml-1">Kecamatan</label>
-  <select
-    name="kecamatan"
-    value={form.kecamatan}
-    onChange={handleChange}
-    disabled={!kecamatanList.length}
-    className="rounded-xl border px-5 py-3.5"
-  >
-    <option value="">Pilih Kecamatan</option>
-    {kecamatanList.map(kec => (
-      <option key={kec.code} value={kec.code}>{kec.name}</option>
-    ))}
-  </select>
-</div>
+              <label className="text-sm font-bold text-slate-700 ml-1">
+                Kota / Kabupaten
+              </label>
+              <select
+                name="kota"
+                value={form.kota}
+                onChange={handleChange}
+                disabled={!kotaList.length}
+                className="rounded-xl border px-5 py-3.5"
+              >
+                <option value="">Pilih Kota/Kabupaten</option>
+                {kotaList.map((k) => (
+                  <option key={k.code} value={k.code}>
+                    {k.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-bold text-slate-700 ml-1">
+                Kecamatan
+              </label>
+              <select
+                name="kecamatan"
+                value={form.kecamatan}
+                onChange={handleChange}
+                disabled={!kecamatanList.length}
+                className="rounded-xl border px-5 py-3.5"
+              >
+                <option value="">Pilih Kecamatan</option>
+                {kecamatanList.map((kec) => (
+                  <option key={kec.code} value={kec.code}>
+                    {kec.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <Input
               label="No. Telepon"
@@ -454,16 +459,15 @@ setStartFaceScan(false);   // 🔥 penting
               >
                 {/* CLOSE BUTTON */}
                 <button
-  onClick={() => {
-    setShowModal(false);
-    setStartFaceScan(false);   // 🔥 reset kamera
-    setFaceVerified(false);    // opsional: reset status wajah
-  }}
-  className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
->
-  <X className="w-6 h-6" />
-</button>
-
+                  onClick={() => {
+                    setShowModal(false);
+                    setStartFaceScan(false); // 🔥 reset kamera
+                    setFaceVerified(false); // opsional: reset status wajah
+                  }}
+                  className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
+                >
+                  <X className="w-6 h-6" />
+                </button>
 
                 {/* HEADER */}
                 <div className="mb-12 text-center">
@@ -507,60 +511,70 @@ setStartFaceScan(false);   // 🔥 penting
                           Scan Sidik Jari
                         </button>
                       </motion.div>
-                      
-{/* ====== WAJAH ====== */}
-<motion.div
-  whileHover={!faceVerified ? { y: -6 } : {}}
-  className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
->
-  {!faceVerified ? (
-    <>
-      {/* ===== PREVIEW (SEBELUM SCAN) ===== */}
-      <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
-        <motion.div
-          className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
-          animate={{ scale: [1, 1.15, 1], opacity: [0.6, 0.2, 0.6] }}
-          transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-        />
 
-        <motion.div
-          className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
-          animate={{ y: [0, 176, 0] }}
-          transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
-        />
+                      {/* ====== WAJAH ====== */}
+                      <motion.div
+                        whileHover={!faceVerified ? { y: -6 } : {}}
+                        className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
+                      >
+                        {!faceVerified ? (
+                          <>
+                            {/* ===== PREVIEW (SEBELUM SCAN) ===== */}
+                            <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
+                              <motion.div
+                                className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
+                                animate={{
+                                  scale: [1, 1.15, 1],
+                                  opacity: [0.6, 0.2, 0.6],
+                                }}
+                                transition={{
+                                  duration: 2.2,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }}
+                              />
 
-        <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
-      </div>
+                              <motion.div
+                                className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
+                                animate={{ y: [0, 176, 0] }}
+                                transition={{
+                                  duration: 2.5,
+                                  repeat: Infinity,
+                                  ease: "linear",
+                                }}
+                              />
 
-      {/* TOMBOL INTERAKTIF */}
-      <motion.button
-        whileHover={{ scale: 1.04 }}
-        whileTap={{ scale: 0.97 }}
-        onClick={() => {
-          setShowModal(false);      // tutup modal biometrik utama
-          setShowFaceModal(true);   // buka modal kamera
-        }}
-        className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-      >
-        Scan Wajah
-      </motion.button>
+                              <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
+                            </div>
 
-      <p className="text-sm text-slate-500 text-center">
-        Gunakan kamera untuk verifikasi wajah pasien
-      </p>
-    </>
-  ) : (
-    <motion.div
-      initial={{ scale: 0.8, opacity: 0 }}
-      animate={{ scale: 1, opacity: 1 }}
-      className="flex items-center gap-2 text-green-600 font-semibold"
-    >
-      <CheckCircle className="w-6 h-6 animate-bounce" />
-      Wajah Terverifikasi
-    </motion.div>
-  )}
-</motion.div>
+                            {/* TOMBOL INTERAKTIF */}
+                            <motion.button
+                              whileHover={{ scale: 1.04 }}
+                              whileTap={{ scale: 0.97 }}
+                              onClick={() => {
+                                setShowModal(false); // tutup modal biometrik utama
+                                setShowFaceModal(true); // buka modal kamera
+                              }}
+                              className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+                            >
+                              Scan Wajah
+                            </motion.button>
 
+                            <p className="text-sm text-slate-500 text-center">
+                              Gunakan kamera untuk verifikasi wajah pasien
+                            </p>
+                          </>
+                        ) : (
+                          <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="flex items-center gap-2 text-green-600 font-semibold"
+                          >
+                            <CheckCircle className="w-6 h-6 animate-bounce" />
+                            Wajah Terverifikasi
+                          </motion.div>
+                        )}
+                      </motion.div>
                     </div>
 
                     {/* TOMBOL VERIFIKASI */}
@@ -581,63 +595,64 @@ setStartFaceScan(false);   // 🔥 penting
           )}
         </AnimatePresence>
         {/*modal proses scan  */}
-<AnimatePresence>
-  {showFaceModal && (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-6"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <motion.div
-        initial={{ scale: 0.92, opacity: 0, y: 50 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.92, opacity: 0, y: 50 }}
-        transition={{ type: "spring", damping: 22, stiffness: 260 }}
-        className="bg-white rounded-3xl w-full max-w-4xl p-6 sm:p-8 md:p-10 shadow-2xl relative"
-      >
-        {/* CLOSE BUTTON */}
-        <button
-          onClick={() => {
-            setShowFaceModal(false);
-            setStartFaceScan(false);
-          }}
-          className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
-        >
-          <X className="w-6 h-6" />
-        </button>
+        <AnimatePresence>
+          {showFaceModal && (
+            <motion.div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 sm:p-6"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <motion.div
+                initial={{ scale: 0.92, opacity: 0, y: 50 }}
+                animate={{ scale: 1, opacity: 1, y: 0 }}
+                exit={{ scale: 0.92, opacity: 0, y: 50 }}
+                transition={{ type: "spring", damping: 22, stiffness: 260 }}
+                className="bg-white rounded-3xl w-full max-w-4xl p-6 sm:p-8 md:p-10 shadow-2xl relative"
+              >
+                {/* CLOSE BUTTON */}
+                <button
+                  onClick={() => {
+                    setShowFaceModal(false);
+                    setStartFaceScan(false);
+                  }}
+                  className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+                >
+                  <X className="w-6 h-6" />
+                </button>
 
-        {/* HEADER */}
-        <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-slate-800">
-            Perekaman Wajah Pasien
-          </h2>
-          <p className="text-slate-500 mt-2">
-            Posisikan wajah di dalam kotak biru. Pastikan pencahayaan cukup dan hindari gerakan cepat.
-          </p>
-        </div>
+                {/* HEADER */}
+                <div className="text-center mb-6">
+                  <h2 className="text-2xl font-bold text-slate-800">
+                    Perekaman Wajah Pasien
+                  </h2>
+                  <p className="text-slate-500 mt-2">
+                    Posisikan wajah di dalam kotak biru. Pastikan pencahayaan
+                    cukup dan hindari gerakan cepat.
+                  </p>
+                </div>
 
-        {/* CAMERA FULL AREA */}
-        <div className="w-full">
-          <FaceScanner
-            onComplete={() => {
-              setFaceVerified(true);
-              setShowFaceModal(false);
-              setShowModal(true);
-            }}
-          />
-        </div>
+                {/* CAMERA FULL AREA */}
+                <div className="w-full">
+                  <FaceScanner
+                    onComplete={(descriptor) => {
+                      setFaceDescriptor(descriptor); // ✅ BARU
+                      setFaceVerified(true);
+                      setShowFaceModal(false);
+                      setShowModal(true);
+                    }}
+                  />
+                </div>
 
-        {/* FOOTER NOTE */}
-        <p className="text-sm text-slate-500 text-center mt-5">
-          Sistem akan otomatis mengambil beberapa frame wajah untuk verifikasi
-        </p>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
+                {/* FOOTER NOTE */}
+                <p className="text-sm text-slate-500 text-center mt-5">
+                  Sistem akan otomatis mengambil beberapa frame wajah untuk
+                  verifikasi
+                </p>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <AnimatePresence>
           {showConfirmModal && (
@@ -680,33 +695,39 @@ setStartFaceScan(false);   // 🔥 penting
 
                 {/* DATA PASIEN */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                 {Object.entries(form).map(([key, value]) => {
-  let displayValue = value || "-";
+                  {Object.entries(form).map(([key, value]) => {
+                    let displayValue = value || "-";
 
-  if (key === "provinsi") {
-    displayValue = getProvinsiName(form.provinsi);
-  }
+                    if (key === "provinsi") {
+                      displayValue = getProvinsiName(form.provinsi);
+                    }
 
-  if (key === "kota") {
-    displayValue = getKotaName(form.provinsi, form.kota);
-  }
+                    if (key === "kota") {
+                      displayValue = getKotaName(form.provinsi, form.kota);
+                    }
 
-  if (key === "kecamatan") {
-    displayValue = getKecamatanName(form.provinsi, form.kota, form.kecamatan);
-  }
+                    if (key === "kecamatan") {
+                      displayValue = getKecamatanName(
+                        form.provinsi,
+                        form.kota,
+                        form.kecamatan,
+                      );
+                    }
 
-  return (
-    <div key={key} className="flex justify-between border-b py-2">
-      <span className="text-slate-500 capitalize">
-        {key.replace(/([A-Z])/g, " $1")}
-      </span>
-      <span className="font-semibold text-slate-700">
-        {displayValue}
-      </span>
-    </div>
-  );
-})}
-
+                    return (
+                      <div
+                        key={key}
+                        className="flex justify-between border-b py-2"
+                      >
+                        <span className="text-slate-500 capitalize">
+                          {key.replace(/([A-Z])/g, " $1")}
+                        </span>
+                        <span className="font-semibold text-slate-700">
+                          {displayValue}
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div className="flex gap-4 mt-8">
@@ -718,24 +739,49 @@ setStartFaceScan(false);   // 🔥 penting
                   </button>
 
                   <button
-                    onClick={() => {
-  // 🔄 Konversi kode wilayah jadi nama
-  const dataUntukDB = {
-    ...form,
-    provinsi: getProvinsiName(form.provinsi),
-    kota: getKotaName(form.provinsi, form.kota),
-    kecamatan: getKecamatanName(form.provinsi, form.kota, form.kecamatan),
-  };
+                    onClick={async () => {
+                      if (!faceDescriptor) {
+                        alert("Wajah belum direkam");
+                        return;
+                      }
 
-  console.log("Data dikirim ke database:", dataUntukDB);
+                      const dataUntukDB = {
+                        ...form,
+                        provinsi: getProvinsiName(form.provinsi),
+                        kota: getKotaName(form.provinsi, form.kota),
+                        kecamatan: getKecamatanName(
+                          form.provinsi,
+                          form.kota,
+                          form.kecamatan,
+                        ),
+                      };
 
-  // NANTI DI SINI KAMU KIRIM KE BACKEND / API
-  // await fetch("/api/pasien", { method: "POST", body: JSON.stringify(dataUntukDB) })
+                      try {
+                        const response = await fetch(
+                          "http://127.0.0.1:5000/register",
+                          {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              ...dataUntukDB,
+                              descriptor: faceDescriptor,
+                            }),
+                          },
+                        );
 
-setShowConfirmModal(false);
-setShowSuccessModal(true);
-}}
+                        const result = await response.json();
 
+                        if (result.status === "success") {
+                          setShowConfirmModal(false);
+                          setShowSuccessModal(true);
+                        } else {
+                          alert("Gagal menyimpan: " + result.message);
+                        }
+                      } catch (err) {
+                        console.error(err);
+                        alert("Server tidak dapat dihubungi");
+                      }
+                    }}
                     className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                   >
                     Simpan & Daftarkan
@@ -747,44 +793,44 @@ setShowSuccessModal(true);
         </AnimatePresence>
       </div>
       <AnimatePresence>
-  {showSuccessModal && (
-    <motion.div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <motion.div
-        initial={{ scale: 0.8, opacity: 0, y: 40 }}
-        animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.8, opacity: 0, y: 40 }}
-        transition={{ type: "spring", damping: 18, stiffness: 260 }}
-        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center"
-      >
-        <div className="flex justify-center mb-4">
-          <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
-        </div>
+        {showSuccessModal && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0, y: 40 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.8, opacity: 0, y: 40 }}
+              transition={{ type: "spring", damping: 18, stiffness: 260 }}
+              className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center"
+            >
+              <div className="flex justify-center mb-4">
+                <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
+              </div>
 
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-          Pendaftaran Berhasil
-        </h2>
-        <p className="text-slate-500 mb-6">
-          Data pasien berhasil disimpan ke sistem.
-        </p>
+              <h2 className="text-2xl font-bold text-slate-800 mb-2">
+                Pendaftaran Berhasil
+              </h2>
+              <p className="text-slate-500 mb-6">
+                Data pasien berhasil disimpan ke sistem.
+              </p>
 
-        <button
-          onClick={() => {
-            setShowSuccessModal(false);
-            handleReset(); // reset setelah tutup modal
-          }}
-          className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition"
-        >
-          Tutup
-        </button>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
+              <button
+                onClick={() => {
+                  setShowSuccessModal(false);
+                  handleReset(); // reset setelah tutup modal
+                }}
+                className="w-full py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition"
+              >
+                Tutup
+              </button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </Page>
   );
 }

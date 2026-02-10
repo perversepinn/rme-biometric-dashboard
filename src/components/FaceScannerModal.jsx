@@ -22,31 +22,38 @@ export default function FaceScannerModal({ open, onComplete, onClose }) {
     "Hadap sedikit ke bawah",
   ];
 
-  // LOAD MODEL
+  /* ================= LOAD MODEL ================= */
   useEffect(() => {
     if (!open) return;
+
     const load = async () => {
       const MODEL_URL = "/models";
       await Promise.all([
         faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL),
         faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL), // ✅ WAJIB
       ]);
       setReady(true);
     };
+
     load();
   }, [open]);
 
-  // CAMERA
+  /* ================= CAMERA ================= */
   useEffect(() => {
     if (!ready) return;
+
     navigator.mediaDevices.getUserMedia({ video: true }).then((stream) => {
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
     });
-    return () => streamRef.current?.getTracks().forEach(t => t.stop());
+
+    return () => {
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+    };
   }, [ready]);
 
-  // DETECTION (SAMA PERSIS)
+  /* ================= DETECTION LOOP ================= */
   useEffect(() => {
     if (!ready) return;
 
@@ -75,8 +82,10 @@ export default function FaceScannerModal({ open, onComplete, onClose }) {
       const cy = box.y + box.height / 2;
 
       const inCenter =
-        cx > vw * 0.35 && cx < vw * 0.65 &&
-        cy > vh * 0.35 && cy < vh * 0.65;
+        cx > vw * 0.35 &&
+        cx < vw * 0.65 &&
+        cy > vh * 0.35 &&
+        cy < vh * 0.65;
 
       if (!inCenter) {
         confidence = 0;
@@ -111,11 +120,23 @@ export default function FaceScannerModal({ open, onComplete, onClose }) {
 
       let poseCorrect = false;
       switch (count) {
-        case 0: poseCorrect = Math.abs(yaw) < 0.2; break;
-        case 1: poseCorrect = yaw > YAW_TH; break;
-        case 2: poseCorrect = yaw < -YAW_TH; break;
-        case 3: poseCorrect = pitchEye < basePitchRef.current - PITCH_TH; break;
-        case 4: poseCorrect = pitchEye > basePitchRef.current + PITCH_TH; break;
+        case 0:
+          poseCorrect = Math.abs(yaw) < 0.2;
+          break;
+        case 1:
+          poseCorrect = yaw > YAW_TH;
+          break;
+        case 2:
+          poseCorrect = yaw < -YAW_TH;
+          break;
+        case 3:
+          poseCorrect = pitchEye < basePitchRef.current - PITCH_TH;
+          break;
+        case 4:
+          poseCorrect = pitchEye > basePitchRef.current + PITCH_TH;
+          break;
+        default:
+          break;
       }
 
       confidence = poseCorrect
@@ -134,7 +155,7 @@ export default function FaceScannerModal({ open, onComplete, onClose }) {
         cooldownRef.current = true;
         setScanning(true);
         setFaceStable(true);
-        setCount(c => c + 1);
+        setCount((c) => c + 1);
 
         confidence = 0;
         stableStart = null;
@@ -149,11 +170,26 @@ export default function FaceScannerModal({ open, onComplete, onClose }) {
     return () => clearInterval(loop);
   }, [ready, count]);
 
+  /* ================= FINALIZE & SEND DESCRIPTOR ================= */
   useEffect(() => {
-    if (count === 5) {
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      onComplete();
-    }
+    const finalize = async () => {
+      if (count !== 5 || !videoRef.current) return;
+
+      const detection = await faceapi
+        .detectSingleFace(videoRef.current)
+        .withFaceLandmarks()
+        .withFaceDescriptor();
+
+      if (!detection) return;
+
+      const descriptor = Array.from(detection.descriptor);
+
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+
+      onComplete(descriptor); // ✅ INTI
+    };
+
+    finalize();
   }, [count, onComplete]);
 
   return (

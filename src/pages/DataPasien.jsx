@@ -1,29 +1,39 @@
-import { useMemo, useState } from "react";
-import { Eye, Edit, Trash2, X, Search, FileText, FileSpreadsheet } from "lucide-react";
+import { useMemo, useState, useEffect } from "react";
+import {
+  Eye,
+  Edit,
+  Trash2,
+  X,
+  Search,
+  FileText,
+  FileSpreadsheet,
+} from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Page from "../components/Page";
 
-/* ===== DUMMY DATA ===== */
-const initialData = [
-  { noRM: "RM-0001", nama: "Siti Aminah", nik: "3204123409870001", alamat: "Garut", tanggal: "2026-01-24" },
-  { noRM: "RM-0002", nama: "Budi Santoso", nik: "3204123409870002", alamat: "Bandung", tanggal: "2026-01-24" },
-];
-
 export default function DataPasien({ auditLogs, setAuditLogs, user }) {
-  const [rows, setRows] = useState(initialData);
+  const [rows, setRows] = useState([]);
   const [search, setSearch] = useState("");
   const [detail, setDetail] = useState(null);
   const [editData, setEditData] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
 
+  // 🔥 AMBIL DATA DARI DATABASE
+  useEffect(() => {
+    fetch("http://127.0.0.1:5000/patients")
+      .then((res) => res.json())
+      .then((data) => setRows(data))
+      .catch((err) => console.error("Gagal ambil data pasien", err));
+  }, []);
+
   const filtered = useMemo(() => {
     return rows.filter(
       (p) =>
         p.nama.toLowerCase().includes(search.toLowerCase()) ||
-        p.nik.includes(search)
+        p.nik.includes(search),
     );
   }, [rows, search]);
 
@@ -32,7 +42,7 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
     const before = rows.find((p) => p.noRM === editData.noRM);
 
     setRows((prev) =>
-      prev.map((p) => (p.noRM === editData.noRM ? editData : p))
+      prev.map((p) => (p.noRM === editData.noRM ? editData : p)),
     );
 
     setAuditLogs((prev) => [
@@ -76,13 +86,7 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
     autoTable(doc, {
       startY: 22,
       head: [["No RM", "Nama", "NIK", "Alamat", "Tanggal"]],
-      body: filtered.map((p) => [
-        p.noRM,
-        p.nama,
-        p.nik,
-        p.alamat,
-        p.tanggal,
-      ]),
+      body: filtered.map((p) => [p.noRM, p.nama, p.nik, p.alamat, p.tanggal]),
     });
 
     doc.save("data-pasien.pdf");
@@ -128,23 +132,40 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
           <table className="w-full text-sm">
             <thead className="bg-slate-100">
               <tr>
-                {["No RM", "Nama", "NIK", "Alamat", "Tanggal", "Aksi"].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left">{h}</th>
-                ))}
+                {["No RM", "Nama", "NIK", "Alamat", "Tanggal", "Aksi"].map(
+                  (h) => (
+                    <th key={h} className="px-4 py-3 text-left">
+                      {h}
+                    </th>
+                  ),
+                )}
               </tr>
             </thead>
             <tbody>
               {filtered.map((p) => (
-                <tr key={p.noRM} className="border-t hover:bg-slate-50 transition">
+                <tr
+                  key={p.noRM}
+                  className="border-t hover:bg-slate-50 transition"
+                >
                   <td className="px-4 py-3">{p.noRM}</td>
                   <td className="px-4 py-3">{p.nama}</td>
                   <td className="px-4 py-3">{p.nik}</td>
                   <td className="px-4 py-3">{p.alamat}</td>
                   <td className="px-4 py-3">{p.tanggal}</td>
                   <td className="px-4 py-3 flex gap-2">
-                    <IconButton title="Detail" onClick={() => setDetail(p)}><Eye /></IconButton>
-                    <IconButton title="Edit" onClick={() => setEditData(p)}><Edit /></IconButton>
-                    <IconButton title="Delete" danger onClick={() => setConfirmDelete(p)}><Trash2 /></IconButton>
+                    <IconButton title="Detail" onClick={() => setDetail(p)}>
+                      <Eye />
+                    </IconButton>
+                    <IconButton title="Edit" onClick={() => setEditData(p)}>
+                      <Edit />
+                    </IconButton>
+                    <IconButton
+                      title="Delete"
+                      danger
+                      onClick={() => setConfirmDelete(p)}
+                    >
+                      <Trash2 />
+                    </IconButton>
                   </td>
                 </tr>
               ))}
@@ -187,15 +208,24 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
           )}
 
           {confirmDelete && (
-            <Modal title="Konfirmasi Hapus" onClose={() => setConfirmDelete(null)}>
+            <Modal
+              title="Konfirmasi Hapus"
+              onClose={() => setConfirmDelete(null)}
+            >
               <p className="mb-4 text-sm">
                 Hapus data pasien <b>{confirmDelete.nama}</b>?
               </p>
               <div className="flex gap-2">
-                <button onClick={deleteRow} className="flex-1 bg-red-600 text-white py-2 rounded-lg">
+                <button
+                  onClick={deleteRow}
+                  className="flex-1 bg-red-600 text-white py-2 rounded-lg"
+                >
                   Hapus
                 </button>
-                <button onClick={() => setConfirmDelete(null)} className="flex-1 border rounded-lg py-2">
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="flex-1 border rounded-lg py-2"
+                >
                   Batal
                 </button>
               </div>
