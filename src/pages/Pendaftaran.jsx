@@ -18,6 +18,7 @@ export default function Pendaftaran() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
 const [showFaceModal, setShowFaceModal] = useState(false);
 const [showSuccessModal, setShowSuccessModal] = useState(false);
+const [faceDescriptor, setFaceDescriptor] = useState(null);
 
   const [form, setForm] = useState({
     noRM: "",
@@ -71,11 +72,7 @@ const getKecamatanName = (provCode, kotaCode, kecCode) => {
   return kec ? kec.name : kecCode;
 };
 
-  // ================= AUTO GENERATE NO RM =================
-  useEffect(() => {
-    const randomRM = "RM-" + Math.floor(100000 + Math.random() * 900000);
-    setForm((prev) => ({ ...prev, noRM: randomRM }));
-  }, []);
+
 
   // ================= HITUNG UMUR OTOMATIS =================
   useEffect(() => {
@@ -124,44 +121,45 @@ const handleChange = (e) => {
 
 
 
-  const handleReset = () => {
-    setForm({
-      nama: "",
-      tempatLahir: "",
-      tanggalLahir: "",
-      umur: "",
-      jenisKelamin: "",
-      alamat: "",
-      kecamatan: "",
-      kota: "",
-      provinsi: "",
-      telepon: "",
-      agama: "",
-      statusPerkawinan: "",
-      pekerjaan: "",
-      pendidikan: "",
-      namaIbu: "",
-      pekerjaanIbu: "",
-      namaAyah: "",
-      pekerjaanAyah: "",
-      namaKK: "",
-      nik: "",
-      jkn: "",
-      catatan: "",
-    });
+const handleReset = async () => {
+  setForm({
+    noRM: "",
+    nama: "",
+    tempatLahir: "",
+    tanggalLahir: "",
+    umur: "",
+    jenisKelamin: "",
+    alamat: "",
+    kecamatan: "",
+    kota: "",
+    provinsi: "",
+    telepon: "",
+    agama: "",
+    statusPerkawinan: "",
+    pekerjaan: "",
+    pendidikan: "",
+    namaIbu: "",
+    pekerjaanIbu: "",
+    namaAyah: "",
+    pekerjaanAyah: "",
+    namaKK: "",
+    nik: "",
+    jkn: "",
+    catatan: "",
+  });
 
-    // 🔥 RESET STATUS BIOMETRIK
-    setFingerVerified(false);
-    setFaceVerified(false);
-setStartFaceScan(false);   // 🔥 penting
+  setFaceDescriptor(null);
+  setFingerVerified(false);
+  setFaceVerified(false);
+  setStartFaceScan(false);
+  setShowConfirmModal(false);
+  setShowModal(false);
 
-    // Tutup semua modal kalau masih terbuka
-    setShowConfirmModal(false);
-    setShowModal(false);
+  await generateNewNoRM();   // 🔥 penting
 
-    // Scroll ke atas biar kembali ke awal form
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
+  window.scrollTo({ top: 0, behavior: "smooth" });
+};
+
 
   const simulateBiometricSuccess = () => {
     setLoading(true);
@@ -199,6 +197,48 @@ setStartFaceScan(false);   // 🔥 penting
     </div>
   );
 
+const [loadingNoRM, setLoadingNoRM] = useState(true);
+
+useEffect(() => {
+  const fetchNoRM = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/generate-norm");
+      const result = await response.json();
+
+      if (result.status === "success") {
+        setForm(prev => ({
+          ...prev,
+          noRM: result.noRM
+        }));
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingNoRM(false);
+    }
+  };
+
+  fetchNoRM();
+}, []);
+
+const generateNewNoRM = async () => {
+  try {
+    const response = await fetch("http://127.0.0.1:5000/generate-norm");
+    const result = await response.json();
+
+    if (result.status === "success") {
+      setForm(prev => ({
+        ...prev,
+        noRM: result.noRM
+      }));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const [lastSavedNoRM, setLastSavedNoRM] = useState(null);
+
   return (
     <Page>
       <div className="space-y-8">
@@ -221,10 +261,10 @@ setStartFaceScan(false);   // 🔥 penting
                 No. Rekam Medis
               </label>
               <input
-                value={form.noRM}
-                disabled
-                className="rounded-xl border px-5 py-3.5 bg-slate-100"
-              />
+  value={loadingNoRM ? "Generating..." : form.noRM}
+  disabled
+  className="rounded-xl border px-5 py-3.5 bg-slate-100"
+/>
             </div>
 
             {/* NAMA */}
@@ -620,12 +660,14 @@ setStartFaceScan(false);   // 🔥 penting
         {/* CAMERA FULL AREA */}
         <div className="w-full">
           <FaceScanner
-            onComplete={() => {
-              setFaceVerified(true);
-              setShowFaceModal(false);
-              setShowModal(true);
-            }}
-          />
+  mode="register"
+  onComplete={(descriptor) => {
+    setFaceDescriptor(descriptor);
+    setFaceVerified(true);
+    setShowFaceModal(false);
+    setShowModal(true);
+  }}
+/>
         </div>
 
         {/* FOOTER NOTE */}
@@ -718,8 +760,7 @@ setStartFaceScan(false);   // 🔥 penting
                   </button>
 
                   <button
-                    onClick={() => {
-  // 🔄 Konversi kode wilayah jadi nama
+                    onClick={async () => {
   const dataUntukDB = {
     ...form,
     provinsi: getProvinsiName(form.provinsi),
@@ -727,14 +768,31 @@ setStartFaceScan(false);   // 🔥 penting
     kecamatan: getKecamatanName(form.provinsi, form.kota, form.kecamatan),
   };
 
-  console.log("Data dikirim ke database:", dataUntukDB);
+  const response = await fetch("http://127.0.0.1:5000/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      ...dataUntukDB,
+      descriptor: faceDescriptor
+    }),
+  });
 
-  // NANTI DI SINI KAMU KIRIM KE BACKEND / API
-  // await fetch("/api/pasien", { method: "POST", body: JSON.stringify(dataUntukDB) })
+  const result = await response.json();
 
+  if (result.status === "success") {
+  setForm(prev => ({
+    ...prev,
+    noRM: result.noRM
+  }));
+setLastSavedNoRM(result.noRM);
 setShowConfirmModal(false);
 setShowSuccessModal(true);
+}
+ else {
+    alert("Gagal menyimpan: " + result.message);
+  }
 }}
+
 
                     className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                   >
@@ -764,7 +822,7 @@ setShowSuccessModal(true);
         <div className="flex justify-center mb-4">
           <CheckCircle className="w-16 h-16 text-green-500 animate-bounce" />
         </div>
-
+      <p>No RM: {lastSavedNoRM}</p>
         <h2 className="text-2xl font-bold text-slate-800 mb-2">
           Pendaftaran Berhasil
         </h2>
