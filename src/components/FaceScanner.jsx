@@ -45,7 +45,14 @@ const maxPose = mode === "verify" ? 1 : 5;
     if (!ready) return;
 
     const startCamera = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+  video: {
+    width: 640,
+    height: 480,
+    facingMode: "user",
+  }
+});
+      videoRef.current.style.filter = "brightness(1.25) contrast(1.15)";
       streamRef.current = stream;
       videoRef.current.srcObject = stream;
     };
@@ -64,21 +71,31 @@ const maxPose = mode === "verify" ? 1 : 5;
     const interval = setInterval(async () => {
       if (!videoRef.current || cooldownRef.current) return;
 
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current)
-        .withFaceLandmarks();
+const detections = await faceapi
+  .detectAllFaces(videoRef.current)
+  .withFaceLandmarks();
 
-      if (!detection) {
-        setFaceDetected(false);
-        setFaceCentered(false);
-        setFaceStable(false);
-        setScanning(false);
-        stableStartTime = null;
-        lastBox = null;
-        return;
-      }
+if (!detections.length) {
+  setFaceDetected(false);
+  setFaceCentered(false);
+  setFaceStable(false);
+  setScanning(false);
+  stableStartTime = null;
+  lastBox = null;
+  return;
+}
 
-      setFaceDetected(true);
+setFaceDetected(true);
+
+// 🔥 pilih wajah paling besar (paling dekat kamera)
+const mainFace = detections.sort((a, b) => {
+  const areaA = a.detection.box.width * a.detection.box.height;
+  const areaB = b.detection.box.width * b.detection.box.height;
+  return areaB - areaA;
+})[0];
+
+const detection = mainFace;
+
 
       const { x, y, width, height } = detection.detection.box;
       const vw = videoRef.current.videoWidth;
@@ -87,11 +104,12 @@ const maxPose = mode === "verify" ? 1 : 5;
       const cx = x + width / 2;
       const cy = y + height / 2;
 
-      const inCenter =
-        cx > vw * 0.35 &&
-        cx < vw * 0.65 &&
-        cy > vh * 0.35 &&
-        cy < vh * 0.65;
+const inCenter =
+  cx > vw * 0.25 &&
+  cx < vw * 0.75 &&
+  cy > vh * 0.25 &&
+  cy < vh * 0.75;
+
 
       if (!inCenter) {
         setFaceCentered(false);
@@ -124,7 +142,7 @@ const maxPose = mode === "verify" ? 1 : 5;
 if (mode === "register") {
   switch (count) {
     case 0:
-      poseCorrect = Math.abs(yaw) < 0.25 && pitch > 0.7 && pitch < 1.6;
+      poseCorrect = Math.abs(yaw) < 0.35 && pitch > 0.6 && pitch < 1.8;
       break;
     case 1:
       poseCorrect = yaw < -0.12;
@@ -133,10 +151,13 @@ if (mode === "register") {
       poseCorrect = yaw > 0.12;
       break;
     case 3:
-      poseCorrect = pitch > 1.25;
-      break;
+    poseCorrect =
+      pitch > 1.4 &&
+      pitch < 2.2 &&
+      Math.abs(yaw) < 0.15;
+    break;
     case 4:
-      poseCorrect = pitch < 0.85;
+      poseCorrect = pitch < 1.05;
       break;
     default:
       break;
@@ -153,7 +174,7 @@ if (mode === "register") {
       // ================= STABILITY CHECK =================
       if (lastBox) {
         const movement = Math.abs(lastBox.x - x) + Math.abs(lastBox.y - y);
-        if (movement > 30) {
+        if (movement > 70) {
           setFaceStable(false);
           stableStartTime = null;
           lastBox = detection.detection.box;
@@ -166,7 +187,7 @@ if (mode === "register") {
       if (!stableStartTime) stableStartTime = Date.now();
       const stableDuration = Date.now() - stableStartTime;
 
-      const requiredStableTime = mode === "verify" ? 700 : 2000;
+      const requiredStableTime = mode === "verify" ? 700 : 1500;
 
 if (stableDuration >= requiredStableTime)
  {
@@ -183,7 +204,7 @@ if (stableDuration >= requiredStableTime)
           setScanning(false);
         }, 1200);
       }
-    }, 400);
+    }, 250);
 
     return () => clearInterval(interval);
   }, [ready, count]);
@@ -192,14 +213,24 @@ if (stableDuration >= requiredStableTime)
 useEffect(() => {
   const finalize = async () => {
     if (count === maxPose && videoRef.current) {
-      const detection = await faceapi
-        .detectSingleFace(videoRef.current)
-        .withFaceLandmarks()
-        .withFaceDescriptor();
+     const detections = await faceapi
+  .detectAllFaces(
+    videoRef.current,
+    new faceapi.SsdMobilenetv1Options({ minConfidence: 0.3 })
+  )
+  .withFaceLandmarks()
+  .withFaceDescriptors();
 
-      if (!detection) return;
 
-      const descriptor = Array.from(detection.descriptor);
+if (!detections.length) return;
+
+const mainFace = detections.sort((a, b) => {
+  const areaA = a.detection.box.width * a.detection.box.height;
+  const areaB = b.detection.box.width * b.detection.box.height;
+  return areaB - areaA;
+})[0];
+
+const descriptor = Array.from(mainFace.descriptor);
 
       streamRef.current?.getTracks().forEach((t) => t.stop());
 
@@ -258,8 +289,11 @@ const activePoseList =
         </div>
 
         <p className="absolute bottom-10 left-1/2 -translate-x-1/2 text-xs text-white/80 bg-black/40 px-3 py-1 rounded-full">
-          {count < 5 ? poseList[count] : "Selesai"}
-        </p>
+  {count < maxPose
+    ? activePoseList[count]
+    : "Selesai"}
+</p>
+
       </div>
     </div>
   );

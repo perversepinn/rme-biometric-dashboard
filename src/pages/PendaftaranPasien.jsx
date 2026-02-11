@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, CheckCircle } from "lucide-react";
-import FaceScannerModal from "../components/FaceScannerModal";
+import FaceScanner from "../components/FaceScanner";
 
 export default function PendaftaranPasien({ setActive }) {
   const [showScanning, setShowScanning] = useState(false);
@@ -104,12 +104,39 @@ return (
       </div>
     </div>
 
-    {/* ================= FACE SCANNER MODAL (INTI) ================= */}
-    <FaceScannerModal
-      open={showScanning}
-      onClose={() => setShowScanning(false)}
-      onComplete={handleScanComplete}
-    />
+    {/* ================= FACE SCANNER ================= */}
+<AnimatePresence>
+  {showScanning && (
+    <motion.div
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.9 }}
+        animate={{ scale: 1 }}
+        exit={{ scale: 0.9 }}
+        className="bg-white rounded-3xl w-full max-w-4xl p-6 relative"
+      >
+        <button
+          onClick={() => setShowScanning(false)}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-700"
+        >
+          ✕
+        </button>
+
+        <FaceScanner
+          mode="verify"
+          onComplete={(descriptor) => {
+            setShowScanning(false);
+            handleScanComplete(descriptor);
+          }}
+        />
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
 
     {/* ================= KONFIRMASI ================= */}
     <AnimatePresence>

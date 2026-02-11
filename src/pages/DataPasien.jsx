@@ -13,6 +13,7 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Page from "../components/Page";
+import FaceScanner from "../components/FaceScanner";
 
 export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   const [rows, setRows] = useState([]);
@@ -38,45 +39,49 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   }, [rows, search]);
 
   /* ===== AUDIT ===== */
-  const saveEdit = () => {
-    const before = rows.find((p) => p.noRM === editData.noRM);
-
-    setRows((prev) =>
-      prev.map((p) => (p.noRM === editData.noRM ? editData : p)),
+const saveEdit = async () => {
+  try {
+    const res = await fetch(
+      `http://127.0.0.1:5000/update-patient/${editData.noRM}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editData),
+      }
     );
 
-    setAuditLogs((prev) => [
-      {
-        waktu: new Date().toLocaleString(),
-        aksi: "EDIT",
-        noRM: editData.noRM,
-        nama: editData.nama,
-        petugas: user.username,
-        before: { ...before },
-        after: { ...editData },
-      },
-      ...prev,
-    ]);
+    const result = await res.json();
 
-    setEditData(null);
-  };
+    if (result.status === "success") {
+      setRows((prev) =>
+        prev.map((p) => (p.noRM === editData.noRM ? editData : p))
+      );
+      setEditData(null);
+    }
+  } catch (err) {
+    alert("Gagal update");
+  }
+};
 
-  const deleteRow = () => {
-    setRows((prev) => prev.filter((p) => p.noRM !== confirmDelete.noRM));
 
-    setAuditLogs((prev) => [
-      {
-        waktu: new Date().toLocaleString(),
-        aksi: "DELETE",
-        noRM: confirmDelete.noRM,
-        nama: confirmDelete.nama,
-        petugas: user.username,
-      },
-      ...prev,
-    ]);
+
+const deleteRow = async () => {
+  try {
+    await fetch(
+      `http://127.0.0.1:5000/delete-patient/${confirmDelete.noRM}`,
+      { method: "DELETE" }
+    );
+
+    setRows((prev) =>
+      prev.filter((p) => p.noRM !== confirmDelete.noRM)
+    );
 
     setConfirmDelete(null);
-  };
+  } catch (err) {
+    alert("Gagal hapus");
+  }
+};
+
 
   /* ===== EXPORT ===== */
   const exportPDF = () => {
@@ -98,6 +103,10 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
     XLSX.utils.book_append_sheet(wb, ws, "Data Pasien");
     XLSX.writeFile(wb, "data-pasien.xlsx");
   };
+
+const [scanMode, setScanMode] = useState(false);
+
+const [showRescan, setShowRescan] = useState(null);
 
   return (
     <Page>
@@ -127,85 +136,120 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
           </div>
         </div>
 
-        {/* TABLE */}
-        <div className="bg-white rounded-xl shadow-sm overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-100">
-              <tr>
-                {["No RM", "Nama", "NIK", "Alamat", "Tanggal", "Aksi"].map(
-                  (h) => (
-                    <th key={h} className="px-4 py-3 text-left">
-                      {h}
-                    </th>
-                  ),
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => (
-                <tr
-                  key={p.noRM}
-                  className="border-t hover:bg-slate-50 transition"
-                >
-                  <td className="px-4 py-3">{p.noRM}</td>
-                  <td className="px-4 py-3">{p.nama}</td>
-                  <td className="px-4 py-3">{p.nik}</td>
-                  <td className="px-4 py-3">{p.alamat}</td>
-                  <td className="px-4 py-3">{p.tanggal}</td>
-                  <td className="px-4 py-3 flex gap-2">
-                    <IconButton title="Detail" onClick={() => setDetail(p)}>
-                      <Eye />
-                    </IconButton>
-                    <IconButton title="Edit" onClick={() => setEditData(p)}>
-                      <Edit />
-                    </IconButton>
-                    <IconButton
-                      title="Delete"
-                      danger
-                      onClick={() => setConfirmDelete(p)}
-                    >
-                      <Trash2 />
-                    </IconButton>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+{/* TABLE */}
+<div className="bg-white rounded-xl shadow-sm w-full overflow-x-auto">
+  <table className="w-full text-sm table-auto">
+    <thead className="bg-slate-100">
+      <tr>
+        {["No RM", "Nama", "NIK", "Alamat", "Tanggal", "Aksi"].map((h) => (
+          <th key={h} className="px-4 py-3 text-left">
+            {h}
+          </th>
+        ))}
+      </tr>
+    </thead>
+
+    <tbody>
+      {filtered.map((p) => (
+        <tr key={p.noRM} className="border-t hover:bg-slate-50 transition">
+          <td className="px-4 py-3">{p.noRM}</td>
+          <td className="px-4 py-3">{p.nama}</td>
+          <td className="px-4 py-3">{p.nik}</td>
+          <td className="px-4 py-3">{p.alamat}</td>
+          <td className="px-4 py-3">{p.tanggal || "-"}</td>
+          <td className="px-4 py-3 flex gap-2">
+            <IconButton title="Detail" onClick={() => setDetail(p)}>
+              <Eye />
+            </IconButton>
+
+            <IconButton title="Edit" onClick={() => setEditData(p)}>
+              <Edit />
+            </IconButton>
+
+            <IconButton
+              title="Delete"
+              danger
+              onClick={() => setConfirmDelete(p)}
+            >
+              <Trash2 />
+            </IconButton>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+</div>
+
 
         {/* ===== MODALS WITH ANIMATION ===== */}
         <AnimatePresence>
-          {detail && (
-            <Modal title="Detail Pasien" onClose={() => setDetail(null)}>
-              {Object.entries(detail).map(([k, v]) => (
-                <div key={k} className="flex justify-between text-sm mb-2">
-                  <span className="text-slate-500">{k}</span>
-                  <span className="font-medium">{v}</span>
-                </div>
-              ))}
-            </Modal>
-          )}
+{detail && (
+  <Modal title="Detail Pasien" onClose={() => setDetail(null)}>
+    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+      {Object.entries(detail).map(([key, value]) => (
+        <div
+          key={key}
+          className="flex justify-between text-sm border-b pb-2"
+        >
+          <span className="text-slate-500 capitalize">
+            {key.replace(/([A-Z])/g, " $1")}
+          </span>
+          <span className="font-medium text-slate-800 text-right max-w-[60%] break-words">
+            {value || "-"}
+          </span>
+        </div>
+      ))}
+    </div>
+  </Modal>
+)}
 
-          {editData && (
-            <Modal title="Edit Pasien" onClose={() => setEditData(null)}>
-              {["nama", "nik", "alamat"].map((f) => (
-                <input
-                  key={f}
-                  value={editData[f]}
-                  onChange={(e) =>
-                    setEditData({ ...editData, [f]: e.target.value })
-                  }
-                  className="w-full border rounded-lg px-3 py-2 mb-3"
-                />
-              ))}
-              <button
-                onClick={saveEdit}
-                className="w-full bg-blue-600 text-white py-2 rounded-lg"
-              >
-                Simpan
-              </button>
-            </Modal>
-          )}
+
+{editData && (
+  <Modal title="Edit Pasien" onClose={() => setEditData(null)}>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto pr-2">
+
+      {Object.keys(editData).map((key) => {
+        if (key === "id") return null;
+
+        return (
+          <div key={key} className="flex flex-col">
+            <label className="text-xs text-slate-500 mb-1 capitalize">
+              {key.replace(/([A-Z])/g, " $1")}
+            </label>
+            <input
+              value={editData[key] || ""}
+              onChange={(e) =>
+                setEditData({ ...editData, [key]: e.target.value })
+              }
+              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+          </div>
+        );
+      })}
+
+    </div>
+
+    {/* BUTTON SECTION */}
+    <div className="flex gap-4 mt-6">
+      <button
+  onClick={() => setShowRescan(editData)}
+  className="w-full bg-purple-600 text-white py-2 rounded-lg mb-3"
+>
+  Scan Ulang Biometrik
+</button>
+
+
+      <button
+        onClick={saveEdit}
+        className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold"
+      >
+        Simpan Perubahan
+      </button>
+    </div>
+
+  </Modal>
+)}
 
           {confirmDelete && (
             <Modal
@@ -232,6 +276,40 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
             </Modal>
           )}
         </AnimatePresence>
+        {showRescan && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="bg-white rounded-2xl p-6 w-full max-w-3xl relative">
+      <h2 className="text-lg font-semibold mb-4 text-center">
+        Scan Ulang Biometrik
+      </h2>
+
+      <FaceScanner
+        mode="verify"
+        onComplete={async (descriptor) => {
+          await fetch(
+            `http://127.0.0.1:5000/update-biometric/${showRescan.noRM}`,
+            {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ descriptor }),
+            }
+          );
+
+          setShowRescan(null);
+          alert("Biometrik berhasil diperbarui");
+        }}
+      />
+
+      <button
+        onClick={() => setShowRescan(null)}
+        className="absolute top-4 right-4"
+      >
+        <X />
+      </button>
+    </div>
+  </div>
+)}
+
       </div>
     </Page>
   );
@@ -248,7 +326,10 @@ function IconButton({ children, danger, ...props }) {
           : "hover:bg-slate-100"
       }`}
     >
-      {children}
+      <div className="flex-1 overflow-y-auto pr-2">
+  {children}
+</div>
+
     </button>
   );
 }
@@ -261,7 +342,7 @@ function Modal({ title, children, onClose }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="bg-white p-6 rounded-xl w-full max-w-md relative shadow-lg"
+        className="bg-white w-[95vw] h-[90vh] rounded-2xl p-8 relative shadow-2xl overflow-hidden flex flex-col"
       >
         <button
           onClick={onClose}

@@ -15,7 +15,6 @@ db = mysql.connector.connect(
     database="rme_puskesmas"
 )
 
-# ================= TEST CONNECTION (OPTIONAL) =================
 if db.is_connected():
     print("✅ Database connected")
 
@@ -26,13 +25,16 @@ if db.is_connected():
 def register():
     data = request.json
 
-    if not data.get("descriptor"):
-        return jsonify({"status": "error", "message": "Descriptor tidak ditemukan"})
+    if not data or not data.get("descriptor"):
+        return jsonify({
+            "status": "error",
+            "message": "Descriptor tidak ditemukan"
+        })
 
     try:
         cursor = db.cursor()
 
-        # 1️⃣ INSERT PATIENT TANPA noRM
+        # 1️⃣ Insert pasien tanpa noRM
         sql_patient = """
             INSERT INTO patients (
                 nama, nik, tempatLahir, tanggalLahir, umur,
@@ -47,36 +49,36 @@ def register():
         """
 
         values_patient = (
-            data["nama"],
-            data["nik"],
-            data["tempatLahir"],
-            data["tanggalLahir"],
-            data["umur"],
-            data["jenisKelamin"],
-            data["alamat"],
-            data["kecamatan"],
-            data["kota"],
-            data["provinsi"],
-            data["telepon"],
-            data["agama"],
-            data["statusPerkawinan"],
-            data["pekerjaan"],
-            data["pendidikan"],
-            data["namaIbu"],
-            data["pekerjaanIbu"],
-            data["namaAyah"],
-            data["pekerjaanAyah"],
-            data["namaKK"],
-            data["jkn"],
-            data["catatan"]
+            data.get("nama"),
+            data.get("nik"),
+            data.get("tempatLahir"),
+            data.get("tanggalLahir"),
+            data.get("umur"),
+            data.get("jenisKelamin"),
+            data.get("alamat"),
+            data.get("kecamatan"),
+            data.get("kota"),
+            data.get("provinsi"),
+            data.get("telepon"),
+            data.get("agama"),
+            data.get("statusPerkawinan"),
+            data.get("pekerjaan"),
+            data.get("pendidikan"),
+            data.get("namaIbu"),
+            data.get("pekerjaanIbu"),
+            data.get("namaAyah"),
+            data.get("pekerjaanAyah"),
+            data.get("namaKK"),
+            data.get("jkn"),
+            data.get("catatan")
         )
 
         cursor.execute(sql_patient, values_patient)
 
-        # 2️⃣ Ambil ID yang baru dibuat
+        # 2️⃣ Ambil ID
         patient_id = cursor.lastrowid
 
-        # 3️⃣ Generate NoRM
+        # 3️⃣ Generate NoRM dari ID
         noRM = f"RM-{patient_id:06d}"
 
         # 4️⃣ Update noRM
@@ -85,7 +87,7 @@ def register():
             (noRM, patient_id)
         )
 
-        # 5️⃣ Insert descriptor wajah
+        # 5️⃣ Simpan descriptor wajah
         descriptor_json = json.dumps(data["descriptor"])
 
         cursor.execute(
@@ -103,10 +105,14 @@ def register():
 
     except Exception as e:
         db.rollback()
-        return jsonify({"status": "error", "message": str(e)})
-    
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        })
+
+
 # =====================================================
-# ================= GENERATE NoRM =====================
+# ================= GENERATE NoRM (PREVIEW) ============
 # =====================================================
 @app.route("/generate-norm", methods=["GET"])
 def generate_norm():
@@ -114,6 +120,7 @@ def generate_norm():
         cursor = db.cursor()
         cursor.execute("SELECT MAX(id) FROM patients")
         result = cursor.fetchone()
+        cursor.close()
 
         next_id = (result[0] or 0) + 1
         noRM = f"RM-{next_id:06d}"
@@ -129,12 +136,20 @@ def generate_norm():
             "message": str(e)
         })
 
+
 # =====================================================
-# ============ TAMBAHAN 1: VERIFY FACE =================
+# ================= VERIFY FACE =======================
 # =====================================================
 @app.route("/verify-face", methods=["POST"])
 def verify_face():
     data = request.json
+
+    if not data or not data.get("descriptor"):
+        return jsonify({
+            "status": "error",
+            "message": "Descriptor tidak ditemukan"
+        })
+
     input_descriptor = np.array(data["descriptor"])
 
     cursor = db.cursor(dictionary=True)
@@ -144,8 +159,9 @@ def verify_face():
         JOIN face_biometrics f ON p.id = f.patient_id
     """)
     records = cursor.fetchall()
+    cursor.close()
 
-    THRESHOLD = 0.5
+    THRESHOLD = 0.6
     best_match = None
     best_distance = 1.0
 
@@ -162,7 +178,7 @@ def verify_face():
         return jsonify({
             "status": "success",
             "patient": best_match,
-            "distance": best_distance
+            "distance": float(best_distance)
         })
 
     return jsonify({
@@ -172,26 +188,81 @@ def verify_face():
 
 
 # =====================================================
-# ============ TAMBAHAN 2: DATA PASIEN =================
+# ================= LIST DATA PASIEN ==================
 # =====================================================
 @app.route("/patients", methods=["GET"])
 def get_patients():
     cursor = db.cursor(dictionary=True)
+
     cursor.execute("""
-        SELECT 
-            noRM,
-            nama,
-            nik,
-            alamat,
-            created_at AS tanggal
+        SELECT *
         FROM patients
-        WHERE status_aktif = 1
         ORDER BY id DESC
     """)
+
     return jsonify(cursor.fetchall())
 
+
+# tabel data pasien
+@app.route("/update-patient/<noRM>", methods=["PUT"])
+def update_patient(noRM):
+    data = request.json
+    cursor = db.cursor()
+
+    cursor.execute("""
+        UPDATE patients SET
+        nama=%s,
+        nik=%s,
+        alamat=%s
+        WHERE noRM=%s
+    """, (
+        data["nama"],
+        data["nik"],
+        data["alamat"],
+        noRM
+    ))
+
+    db.commit()
+    return jsonify({"status": "success"})
+
+@app.route("/delete-patient/<noRM>", methods=["DELETE"])
+def delete_patient(noRM):
+    cursor = db.cursor()
+
+    # hapus biometrik dulu
+    cursor.execute("""
+        DELETE FROM face_biometrics
+        WHERE patient_id = (
+            SELECT id FROM patients WHERE noRM=%s
+        )
+    """, (noRM,))
+
+    # hapus pasien
+    cursor.execute("DELETE FROM patients WHERE noRM=%s", (noRM,))
+
+    db.commit()
+    return jsonify({"status": "success"})
+
+@app.route("/update-biometric/<noRM>", methods=["PUT"])
+def update_biometric(noRM):
+    data = request.json
+    descriptor_json = json.dumps(data["descriptor"])
+    cursor = db.cursor()
+
+    cursor.execute("""
+        UPDATE face_biometrics
+        SET descriptor=%s
+        WHERE patient_id = (
+            SELECT id FROM patients WHERE noRM=%s
+        )
+    """, (descriptor_json, noRM))
+
+    db.commit()
+    return jsonify({"status": "success"})
+
+
 # =====================================================
-# ================= RUN SERVER =========================
+# ================= RUN SERVER ========================
 # =====================================================
 if __name__ == "__main__":
     app.run(debug=True)

@@ -69,11 +69,47 @@ export default function Pendaftaran() {
     return kec ? kec.name : kecCode;
   };
 
-  // ================= AUTO GENERATE NO RM =================
-  useEffect(() => {
-    const randomRM = "RM-" + Math.floor(100000 + Math.random() * 900000);
-    setForm((prev) => ({ ...prev, noRM: randomRM }));
-  }, []);
+  // ================= GENERATE NO RM =================
+const [loadingNoRM, setLoadingNoRM] = useState(true);
+
+useEffect(() => {
+  const fetchNoRM = async () => {
+    try {
+      const response = await fetch("http://127.0.0.1:5000/generate-norm");
+      const result = await response.json();
+
+      if (result.status === "success") {
+        setForm(prev => ({
+          ...prev,
+          noRM: result.noRM
+        }));
+      }
+    } catch (err) {
+      console.error("Gagal generate NoRM", err);
+    } finally {
+      setLoadingNoRM(false);
+    }
+  };
+
+  fetchNoRM();
+}, []);
+
+const generateNewNoRM = async () => {
+  try {
+    const response = await fetch("http://127.0.0.1:5000/generate-norm");
+    const result = await response.json();
+
+    if (result.status === "success") {
+      setForm(prev => ({
+        ...prev,
+        noRM: result.noRM
+      }));
+    }
+  } catch (err) {
+    console.error(err);
+  }
+};
+
 
   // ================= HITUNG UMUR OTOMATIS =================
   useEffect(() => {
@@ -146,6 +182,8 @@ export default function Pendaftaran() {
       catatan: "",
     });
 
+ generateNewNoRM();
+   
     // 🔥 RESET STATUS BIOMETRIK
     setFingerVerified(false);
     setFaceVerified(false);
@@ -217,7 +255,7 @@ export default function Pendaftaran() {
                 No. Rekam Medis
               </label>
               <input
-                value={form.noRM}
+                value={loadingNoRM ? "Generating..." : form.noRM}
                 disabled
                 className="rounded-xl border px-5 py-3.5 bg-slate-100"
               />
