@@ -14,6 +14,8 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Page from "../components/Page";
 import FaceScanner from "../components/FaceScanner";
+import { Fingerprint, Save } from "lucide-react";
+import wilayah from "../data/wilayah.json";
 
 export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   const [rows, setRows] = useState([]);
@@ -21,7 +23,32 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   const [detail, setDetail] = useState(null);
   const [editData, setEditData] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+const [provList] = useState(wilayah);
+const [kotaList, setKotaList] = useState([]);
+const [kecamatanList, setKecamatanList] = useState([]);
+const getProvinsiCode = (name) => {
+  const prov = provList.find((p) => p.name === name);
+  return prov ? prov.code : "";
+};
 
+const getKotaCode = (provCode, name) => {
+  const prov = provList.find((p) => p.code === provCode);
+  if (!prov) return "";
+
+  const kota = prov.regencies.find((k) => k.name === name);
+  return kota ? kota.code : "";
+};
+
+const getKecamatanCode = (provCode, kotaCode, name) => {
+  const prov = provList.find((p) => p.code === provCode);
+  if (!prov) return "";
+
+  const kota = prov.regencies.find((k) => k.code === kotaCode);
+  if (!kota) return "";
+
+  const kec = kota.districts.find((d) => d.name === name);
+  return kec ? kec.code : "";
+};
   // 🔥 AMBIL DATA DARI DATABASE
   useEffect(() => {
     fetch("http://127.0.0.1:5000/patients")
@@ -37,33 +64,85 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
         p.nik.includes(search),
     );
   }, [rows, search]);
+const getProvinsiName = (code) => {
+  const prov = provList.find((p) => p.code === code);
+  return prov ? prov.name : code;
+};
+
+const getKotaName = (provCode, kotaCode) => {
+  const prov = provList.find((p) => p.code === provCode);
+  if (!prov) return kotaCode;
+
+  const kota = prov.regencies.find((k) => k.code === kotaCode);
+  return kota ? kota.name : kotaCode;
+};
+
+const getKecamatanName = (provCode, kotaCode, kecCode) => {
+  const prov = provList.find((p) => p.code === provCode);
+  if (!prov) return kecCode;
+
+  const kota = prov.regencies.find((k) => k.code === kotaCode);
+  if (!kota) return kecCode;
+
+  const kec = kota.districts.find((d) => d.code === kecCode);
+  return kec ? kec.name : kecCode;
+};
 
   /* ===== AUDIT ===== */
 const saveEdit = async () => {
   try {
+
+    const dataToSend = {
+      nama: editData.nama,
+      nik: editData.nik,
+      tempatLahir: editData.tempatLahir,
+      tanggalLahir: editData.tanggalLahir,
+      umur: editData.umur,
+      jenisKelamin: editData.jenisKelamin,
+      alamat: editData.alamat,
+      kecamatan: getKecamatanName(editData.provinsi, editData.kota, editData.kecamatan),
+      kota: getKotaName(editData.provinsi, editData.kota),
+      provinsi: getProvinsiName(editData.provinsi),
+      telepon: editData.telepon,
+      agama: editData.agama,
+      statusPerkawinan: editData.statusPerkawinan,
+      pekerjaan: editData.pekerjaan,
+      pendidikan: editData.pendidikan,
+      namaIbu: editData.namaIbu,
+      pekerjaanIbu: editData.pekerjaanIbu,
+      namaAyah: editData.namaAyah,
+      pekerjaanAyah: editData.pekerjaanAyah,
+      namaKK: editData.namaKK,
+      jkn: editData.jkn,
+      catatan: editData.catatan
+    }
+
     const res = await fetch(
       `http://127.0.0.1:5000/update-patient/${editData.noRM}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
+        body: JSON.stringify(dataToSend)
       }
-    );
+    )
 
-    const result = await res.json();
+    const result = await res.json()
 
     if (result.status === "success") {
-      setRows((prev) =>
-        prev.map((p) => (p.noRM === editData.noRM ? editData : p))
-      );
-      setEditData(null);
+      setRows(prev =>
+        prev.map(p =>
+          p.noRM === editData.noRM ? { ...p, ...dataToSend } : p
+        )
+      )
+
+      setEditData(null)
     }
+
   } catch (err) {
-    alert("Gagal update");
+    console.error(err)
+    alert("Gagal update")
   }
-};
-
-
+}
 
 const deleteRow = async () => {
   try {
@@ -107,6 +186,87 @@ const deleteRow = async () => {
 const [scanMode, setScanMode] = useState(false);
 
 const [showRescan, setShowRescan] = useState(null);
+
+  const fieldOrder = [
+  "noRM",
+  "nama",
+  "nik",
+  "jenisKelamin",
+  "tanggalLahir",
+  "tempatLahir",
+  "umur",
+  "telepon",
+  "alamat",
+  "kecamatan",
+  "kota",
+  "provinsi",
+  "statusPerkawinan",
+  "pekerjaan",
+  "pendidikan",
+  "namaAyah",
+  "pekerjaanAyah",
+  "namaIbu",
+  "pekerjaanIbu",
+  "namaKK",
+  "catatan",
+];
+
+const handleEditChange = (e) => {
+  const { name, value } = e.target;
+
+  if (name === "provinsi") {
+    const selectedProv = provList.find((p) => p.code === value);
+
+    setKotaList(selectedProv ? selectedProv.regencies : []);
+    setKecamatanList([]);
+
+    setEditData((prev) => ({
+      ...prev,
+      provinsi: value,
+      kota: "",
+      kecamatan: "",
+    }));
+
+    return;
+  }
+
+  if (name === "kota") {
+    const selectedKota = kotaList.find((k) => k.code === value);
+
+    setKecamatanList(selectedKota ? selectedKota.districts : []);
+
+    setEditData((prev) => ({
+      ...prev,
+      kota: value,
+      kecamatan: "",
+    }));
+
+    return;
+  }
+
+  setEditData((prev) => ({
+    ...prev,
+    [name]: value,
+  }));
+};
+
+useEffect(() => {
+  if (!editData) return;
+
+  const prov = provList.find((p) => p.code === editData.provinsi);
+
+  if (prov) {
+    setKotaList(prov.regencies);
+
+    const kota = prov.regencies.find(
+      (k) => k.code === editData.kota
+    );
+
+    if (kota) {
+      setKecamatanList(kota.districts);
+    }
+  }
+}, [editData]);
 
   return (
     <Page>
@@ -162,9 +322,40 @@ const [showRescan, setShowRescan] = useState(null);
               <Eye />
             </IconButton>
 
-            <IconButton title="Edit" onClick={() => setEditData(p)}>
-              <Edit />
-            </IconButton>
+<IconButton
+  title="Edit"
+  onClick={() => {
+    const provCode = getProvinsiCode(p.provinsi);
+    const kotaCode = getKotaCode(provCode, p.kota);
+    const kecCode = getKecamatanCode(provCode, kotaCode, p.kecamatan);
+
+    const prov = provList.find((pr) => pr.code === provCode);
+
+    if (prov) {
+      setKotaList(prov.regencies);
+
+      const kota = prov.regencies.find((k) => k.code === kotaCode);
+
+      if (kota) {
+        setKecamatanList(kota.districts);
+      }
+    }
+
+    const patientData = {
+      ...p,
+      tanggalLahir: p.tanggalLahir
+        ? new Date(p.tanggalLahir).toISOString().split("T")[0]
+        : "",
+      provinsi: provCode,
+      kota: kotaCode,
+      kecamatan: kecCode
+    };
+
+    setEditData(patientData);
+  }}
+>
+  <Edit />
+</IconButton>
 
             <IconButton
               title="Delete"
@@ -185,20 +376,27 @@ const [showRescan, setShowRescan] = useState(null);
         <AnimatePresence>
 {detail && (
   <Modal title="Detail Pasien" onClose={() => setDetail(null)}>
-    <div className="space-y-2 max-h-[60vh] overflow-y-auto">
-      {Object.entries(detail).map(([key, value]) => (
-        <div
-          key={key}
-          className="flex justify-between text-sm border-b pb-2"
-        >
-          <span className="text-slate-500 capitalize">
-            {key.replace(/([A-Z])/g, " $1")}
-          </span>
-          <span className="font-medium text-slate-800 text-right max-w-[60%] break-words">
-            {value || "-"}
-          </span>
-        </div>
-      ))}
+   <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-2">
+      {fieldOrder.map((key) => {
+  const value = detail?.[key];
+  if (key === "id") return null;
+
+  return (
+    <div
+  key={key}
+  className={`flex justify-between text-sm border rounded-lg p-3 bg-slate-50
+  ${key === "catatan" ? "col-span-full flex-col items-start" : ""}`}
+>
+      <span className="text-slate-500 capitalize">
+        {key.replace(/([A-Z])/g, " $1")}
+      </span>
+
+      <span className="font-medium text-slate-800 text-right max-w-[60%] break-words">
+        {value || "-"}
+      </span>
+    </div>
+  );
+})}
     </div>
   </Modal>
 )}
@@ -207,46 +405,321 @@ const [showRescan, setShowRescan] = useState(null);
 {editData && (
   <Modal title="Edit Pasien" onClose={() => setEditData(null)}>
 
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[65vh] overflow-y-auto pr-2">
 
-      {Object.keys(editData).map((key) => {
-        if (key === "id") return null;
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-h-[65vh] overflow-y-auto pr-2">
 
-        return (
-          <div key={key} className="flex flex-col">
-            <label className="text-xs text-slate-500 mb-1 capitalize">
-              {key.replace(/([A-Z])/g, " $1")}
-            </label>
-            <input
-              value={editData[key] || ""}
-              onChange={(e) =>
-                setEditData({ ...editData, [key]: e.target.value })
-              }
-              className="border rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-            />
-          </div>
-        );
-      })}
+  {/* NO RM */}
+  <div className="flex flex-col gap-2">
+    <label className="text-sm font-bold text-slate-700 ml-1">
+      No. Rekam Medis
+    </label>
+    <input
+      value={editData.noRM || ""}
+      disabled
+      className="rounded-xl border px-5 py-3.5 bg-slate-100"
+    />
+  </div>
 
-    </div>
+  {/* NAMA */}
+  <Input
+    label="Nama Lengkap"
+    name="nama"
+    value={editData.nama || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* TEMPAT LAHIR */}
+  <Input
+    label="Tempat Lahir"
+    name="tempatLahir"
+    value={editData.tempatLahir || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* TANGGAL LAHIR */}
+  <div className="flex flex-col gap-2">
+    <label className="text-sm font-bold text-slate-700 ml-1">
+      Tanggal Lahir
+    </label>
+    <input
+      type="date"
+      name="tanggalLahir"
+      value={editData.tanggalLahir || ""}
+      onChange={handleEditChange}
+      className="rounded-xl border px-5 py-3.5"
+    />
+  </div>
+
+  {/* UMUR */}
+  <Input
+    label="Umur"
+    name="umur"
+    value={editData.umur || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* JENIS KELAMIN */}
+  <Select
+    label="Jenis Kelamin"
+    name="jenisKelamin"
+    value={editData.jenisKelamin || ""}
+    options={["Laki-laki", "Perempuan"]}
+    onChange={handleEditChange}
+  />
+
+  {/* ALAMAT */}
+  <Input
+    label="Alamat"
+    name="alamat"
+    value={editData.alamat || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* PROVINSI */}
+<div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Provinsi
+  </label>
+
+  <select
+    name="provinsi"
+    value={editData.provinsi || ""}
+    onChange={handleEditChange}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Provinsi</option>
+
+    {provList.map((p) => (
+      <option key={p.code} value={p.code}>
+        {p.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+  {/* KOTA */}
+<div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Kota / Kabupaten
+  </label>
+
+  <select
+    name="kota"
+    value={editData.kota || ""}
+    onChange={handleEditChange}
+    disabled={!kotaList.length}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Kota/Kabupaten</option>
+
+    {kotaList.map((k) => (
+      <option key={k.code} value={k.code}>
+        {k.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+  {/* KECAMATAN */}
+<div className="flex flex-col gap-2">
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Kecamatan
+  </label>
+
+  <select
+    name="kecamatan"
+    value={editData.kecamatan || ""}
+    onChange={handleEditChange}
+    disabled={!kecamatanList.length}
+    className="rounded-xl border px-5 py-3.5"
+  >
+    <option value="">Pilih Kecamatan</option>
+
+    {kecamatanList.map((kec) => (
+      <option key={kec.code} value={kec.code}>
+        {kec.name}
+      </option>
+    ))}
+  </select>
+</div>
+
+  {/* TELEPON */}
+  <Input
+    label="No Telepon"
+    name="telepon"
+    value={editData.telepon || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* AGAMA */}
+  <Select
+    label="Agama"
+    name="agama"
+    value={editData.agama || ""}
+    options={[
+      "Islam",
+      "Kristen",
+      "Katolik",
+      "Hindu",
+      "Buddha",
+      "Konghucu",
+    ]}
+    onChange={handleEditChange}
+  />
+
+  {/* STATUS PERKAWINAN */}
+  <Select
+    label="Status Perkawinan"
+    name="statusPerkawinan"
+    value={editData.statusPerkawinan || ""}
+    options={[
+      "Belum Kawin",
+      "Kawin",
+      "Cerai",
+    ]}
+    onChange={handleEditChange}
+  />
+
+  {/* PEKERJAAN */}
+<Select
+  label="Pekerjaan"
+  name="pekerjaan"
+  value={editData.pekerjaan || ""}
+  options={[
+    "PNS",
+    "Swasta",
+    "Wiraswasta",
+    "Pelajar"
+  ]}
+  onChange={handleEditChange}
+/>
+
+  {/* PENDIDIKAN */}
+<Select
+  label="Pendidikan"
+  name="pendidikan"
+  value={editData.pendidikan || ""}
+  options={[
+    "SD",
+    "SMP",
+    "SMA",
+    "D3",
+    "S1",
+    "S2"
+  ]}
+  onChange={handleEditChange}
+/>
+
+  {/* NAMA IBU */}
+  <Input
+    label="Nama Ibu"
+    name="namaIbu"
+    value={editData.namaIbu || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* PEKERJAAN IBU */}
+<Select
+  label="Pekerjaan Ibu"
+  name="pekerjaanIbu"
+  value={editData.pekerjaanIbu || ""}
+  options={[
+    "IRT",
+    "Swasta",
+    "PNS"
+  ]}
+  onChange={handleEditChange}
+/>
+
+  {/* NAMA AYAH */}
+  <Input
+    label="Nama Ayah"
+    name="namaAyah"
+    value={editData.namaAyah || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* PEKERJAAN AYAH */}
+<Select
+  label="Pekerjaan Ayah"
+  name="pekerjaanAyah"
+  value={editData.pekerjaanAyah || ""}
+  options={[
+    "Swasta",
+    "PNS",
+    "Wiraswasta"
+  ]}
+  onChange={handleEditChange}
+/>
+
+  {/* NAMA KK */}
+  <Input
+    label="Nama Kepala Keluarga"
+    name="namaKK"
+    value={editData.namaKK || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* NIK */}
+  <Input
+    label="NIK"
+    name="nik"
+    value={editData.nik || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* JKN */}
+  <Input
+    label="JKN"
+    name="jkn"
+    value={editData.jkn || ""}
+    onChange={handleEditChange}
+  />
+
+  {/* CATATAN FULL */}
+  <div className="md:col-span-2 flex flex-col gap-2">
+    <label className="text-sm font-bold text-slate-700 ml-1">
+      Catatan
+    </label>
+
+    <textarea
+      name="catatan"
+      value={editData.catatan || ""}
+      onChange={handleEditChange}
+      className="rounded-xl border px-5 py-3.5"
+    />
+  </div>
+
+</div>
 
     {/* BUTTON SECTION */}
-    <div className="flex gap-4 mt-6">
-      <button
-  onClick={() => setShowRescan(editData)}
-  className="w-full bg-purple-600 text-white py-2 rounded-lg mb-3"
->
-  Scan Ulang Biometrik
-</button>
+<div className="flex gap-3 mt-6">
 
+  {/* SCAN ULANG */}
+  <button
+    onClick={() => setShowRescan(editData)}
+    className="flex items-center justify-center gap-2 flex-1 
+    border border-purple-500 text-purple-600 py-3 rounded-xl font-semibold 
+    transition-all duration-200 
+    hover:bg-purple-500 hover:text-white hover:-translate-y-[2px] hover:shadow-md"
+  >
+    <Fingerprint size={18} />
+    Scan Ulang Biometrik
+  </button>
 
-      <button
-        onClick={saveEdit}
-        className="flex-1 bg-blue-600 text-white py-3 rounded-xl font-semibold"
-      >
-        Simpan Perubahan
-      </button>
-    </div>
+  {/* SIMPAN */}
+  <button
+    onClick={saveEdit}
+    className="flex items-center justify-center gap-2 flex-1 
+    border border-blue-600 text-blue-600 py-3 rounded-xl font-semibold 
+    transition-all duration-200 
+    hover:bg-blue-600 hover:text-white hover:-translate-y-[2px] hover:shadow-md"
+  >
+    <Save size={18} />
+    Simpan Perubahan
+  </button>
+
+</div>
 
   </Modal>
 )}
@@ -284,7 +757,7 @@ const [showRescan, setShowRescan] = useState(null);
       </h2>
 
       <FaceScanner
-        mode="verify"
+        mode="register"
         onComplete={async (descriptor) => {
           await fetch(
             `http://127.0.0.1:5000/update-biometric/${showRescan.noRM}`,
@@ -326,10 +799,7 @@ function IconButton({ children, danger, ...props }) {
           : "hover:bg-slate-100"
       }`}
     >
-      <div className="flex-1 overflow-y-auto pr-2">
-  {children}
-</div>
-
+      {children}
     </button>
   );
 }
@@ -342,7 +812,7 @@ function Modal({ title, children, onClose }) {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 12 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="bg-white w-[95vw] h-[90vh] rounded-2xl p-8 relative shadow-2xl overflow-hidden flex flex-col"
+        className="bg-white w-[95vw] max-w-4xl max-h-[85vh] rounded-2xl p-8 relative shadow-2xl flex flex-col"
       >
         <button
           onClick={onClose}
@@ -353,6 +823,39 @@ function Modal({ title, children, onClose }) {
         <h2 className="text-lg font-semibold mb-4">{title}</h2>
         {children}
       </motion.div>
+    </div>
+  );
+}
+
+function Input({ label, ...props }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-bold text-slate-700 ml-1">
+        {label}
+      </label>
+      <input
+        {...props}
+        className="rounded-xl border border-slate-200 px-5 py-3.5 bg-slate-50/30 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500"
+      />
+    </div>
+  );
+}
+
+function Select({ label, options, ...props }) {
+  return (
+    <div className="flex flex-col gap-2">
+      <label className="text-sm font-bold text-slate-700 ml-1">
+        {label}
+      </label>
+      <select
+        {...props}
+        className="rounded-xl border border-slate-200 px-5 py-3.5 bg-slate-50/30 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500"
+      >
+        <option value="">Pilih</option>
+        {options.map((o) => (
+          <option key={o}>{o}</option>
+        ))}
+      </select>
     </div>
   );
 }

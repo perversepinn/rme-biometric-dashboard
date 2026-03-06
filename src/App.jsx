@@ -8,11 +8,13 @@ import DataPasien from "./pages/DataPasien";
 import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import { AnimatePresence, motion } from "framer-motion";
+import DummyFormPasien from "./pages/DummyFormPasien";
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [active, setActive] = useState("dashboard");
   const [auditLogs, setAuditLogs] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   if (!user) {
     return <Login onLogin={setUser} />;
@@ -37,7 +39,10 @@ export default function App() {
               >
                 {active === "dashboard" && <Dashboard activeTab={active} />}
                 {active === "pendaftaranPasien" && (
-                  <PendaftaranPasien setActive={setActive} />
+                  <PendaftaranPasien
+                    setActive={setActive}
+                    setSelectedPatient={setSelectedPatient}
+                  />
                 )}
                 {active === "pendaftaran" && <Pendaftaran />}
                 {active === "pasien" && (
@@ -50,6 +55,9 @@ export default function App() {
                 {active === "audit" && (
                   <AuditLog logs={auditLogs} />
                 )}
+                {active === "dummyForm" && (
+  <DummyFormPasien patient={selectedPatient} />
+)}
               </motion.div>
             </AnimatePresence>
           </div>

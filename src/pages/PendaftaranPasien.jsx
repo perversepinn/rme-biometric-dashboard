@@ -3,11 +3,35 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, CheckCircle } from "lucide-react";
 import FaceScanner from "../components/FaceScanner";
 
-export default function PendaftaranPasien({ setActive }) {
+export default function PendaftaranPasien({ setActive, setSelectedPatient, }) {
   const [showScanning, setShowScanning] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [detectedPatient, setDetectedPatient] = useState(null);
+
+  const fieldOrder = [
+  "noRM",
+  "nama",
+  "nik",
+  "jenisKelamin",
+  "tanggalLahir",
+  "tempatLahir",
+  "umur",
+  "telepon",
+  "alamat",
+  "kecamatan",
+  "kota",
+  "provinsi",
+  "statusPerkawinan",
+  "pekerjaan",
+  "pendidikan",
+  "namaAyah",
+  "pekerjaanAyah",
+  "namaIbu",
+  "pekerjaanIbu",
+  "namaKK",
+  "catatan",
+];
 
   /* =========================
      TRIGGER SCAN (TIDAK DIUBAH)
@@ -29,17 +53,18 @@ export default function PendaftaranPasien({ setActive }) {
 
       const result = await res.json();
 
-      if (result.status === "success") {
-        setDetectedPatient({
-          nama: result.patient.nama,
-          nik: result.patient.nik,
-          ttl: `${result.patient.tempatLahir}, ${result.patient.tanggalLahir}`,
-          alamat: result.patient.alamat,
-          noRM: result.patient.noRM,
-        });
+if (result.status === "success") {
 
-        setShowConfirm(true);
-      } else {
+  const patientData = {
+    ...result.patient,
+    tanggalLahir: result.patient.tanggalLahir
+      ? result.patient.tanggalLahir.split("T")[0]
+      : "",
+  };
+
+  setDetectedPatient(patientData);
+  setShowConfirm(true);
+} else {
         alert("Wajah belum terdaftar");
       }
     } catch (err) {
@@ -151,23 +176,36 @@ return (
             initial={{ scale: 0.85, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.85, opacity: 0 }}
-            className="bg-white rounded-3xl p-10 w-full max-w-lg shadow-2xl"
+            className="bg-white rounded-3xl p-10 w-full max-w-5xl shadow-2xl"
           >
             <h2 className="text-xl font-bold text-slate-800 mb-6 text-center">
               Konfirmasi Data Pasien
             </h2>
 
-            <div className="space-y-3 text-sm">
-              {detectedPatient &&
-                Object.entries(detectedPatient).map(([key, value]) => (
-                  <div key={key} className="flex justify-between border-b pb-2">
-                    <span className="text-slate-500 capitalize">{key}</span>
-                    <span className="font-semibold text-slate-700">
-                      {value}
-                    </span>
-                  </div>
-                ))}
-            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm max-h-[60vh] overflow-y-auto">
+{detectedPatient &&
+  fieldOrder.map((key) => {
+    const value = detectedPatient?.[key];
+    if (!value) return null;
+
+    return (
+      <div
+        key={key}
+        className={`flex flex-col border rounded-lg p-3 bg-slate-50 ${
+          key === "catatan" ? "col-span-full" : ""
+        }`}
+      >
+        <span className="text-xs text-slate-500 mb-1">
+          {key.replace(/([A-Z])/g, " $1")}
+        </span>
+
+        <span className="font-semibold text-slate-800">
+          {value || "-"}
+        </span>
+      </div>
+    );
+  })}
+</div>
 
             <div className="flex gap-4 mt-8">
               <button
@@ -177,14 +215,15 @@ return (
                 Batal
               </button>
               <button
-                onClick={() => {
-                  setShowConfirm(false);
-                  setShowSuccess(true);
-                }}
-                className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
-              >
-                Data Benar
-              </button>
+  onClick={() => {
+    setSelectedPatient(detectedPatient);
+    setShowConfirm(false);
+    setActive("dummyForm");
+  }}
+  className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+>
+  Data Benar
+</button>
             </div>
           </motion.div>
         </motion.div>

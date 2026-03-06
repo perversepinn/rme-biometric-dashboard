@@ -175,15 +175,15 @@ def verify_face():
 
     if best_match and best_distance < THRESHOLD:
         best_match.pop("descriptor")
-        return jsonify({
-            "status": "success",
-            "patient": best_match,
-            "distance": float(best_distance)
-        })
+
+    # ===== FORMAT ULANG TANGGAL LAHIR =====
+    if best_match.get("tanggalLahir"):
+        best_match["tanggalLahir"] = best_match["tanggalLahir"].strftime("%Y-%m-%d")
 
     return jsonify({
-        "status": "not_found",
-        "message": "Wajah belum terdaftar"
+        "status": "success",
+        "patient": best_match,
+        "distance": float(best_distance)
     })
 
 
@@ -213,16 +213,56 @@ def update_patient(noRM):
         UPDATE patients SET
         nama=%s,
         nik=%s,
-        alamat=%s
+        tempatLahir=%s,
+        tanggalLahir=%s,
+        umur=%s,
+        jenisKelamin=%s,
+        alamat=%s,
+        kecamatan=%s,
+        kota=%s,
+        provinsi=%s,
+        telepon=%s,
+        agama=%s,
+        statusPerkawinan=%s,
+        pekerjaan=%s,
+        pendidikan=%s,
+        namaIbu=%s,
+        pekerjaanIbu=%s,
+        namaAyah=%s,
+        pekerjaanAyah=%s,
+        namaKK=%s,
+        jkn=%s,
+        catatan=%s
         WHERE noRM=%s
     """, (
         data["nama"],
         data["nik"],
+        data["tempatLahir"],
+        data["tanggalLahir"],
+        data["umur"],
+        data["jenisKelamin"],
         data["alamat"],
+        data["kecamatan"],
+        data["kota"],
+        data["provinsi"],
+        data["telepon"],
+        data["agama"],
+        data["statusPerkawinan"],
+        data["pekerjaan"],
+        data["pendidikan"],
+        data["namaIbu"],
+        data["pekerjaanIbu"],
+        data["namaAyah"],
+        data["pekerjaanAyah"],
+        data["namaKK"],
+        data["jkn"],
+        data["catatan"],
         noRM
     ))
 
     db.commit()
+    cursor.close()
+
     return jsonify({"status": "success"})
 
 @app.route("/delete-patient/<noRM>", methods=["DELETE"])
