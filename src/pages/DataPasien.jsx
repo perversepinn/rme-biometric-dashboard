@@ -181,25 +181,115 @@ const deleteRow = async () => {
 
 
   /* ===== EXPORT ===== */
-  const exportPDF = () => {
-    const doc = new jsPDF();
-    doc.text("Laporan Data Pasien Puskesmas", 14, 16);
+const exportPDF = () => {
+  const doc = new jsPDF("landscape");
 
-    autoTable(doc, {
-      startY: 22,
-      head: [["No RM", "Nama", "NIK", "Alamat", "Tanggal"]],
-      body: filtered.map((p) => [p.noRM, p.nama, p.nik, p.alamat, p.tanggal]),
-    });
+  doc.setFontSize(16);
+  doc.text("Laporan Data Pasien Puskesmas", 14, 16);
 
-    doc.save("data-pasien.pdf");
-  };
+  autoTable(doc, {
+    startY: 22,
+    head: [[
+      "No RM",
+      "Nama",
+      "NIK",
+      "Jenis Kelamin",
+      "Tanggal Lahir",
+      "Umur",
+      "Telepon",
+      "Alamat",
+      "Kecamatan",
+      "Kota"
+    ]],
 
-  const exportExcel = () => {
-    const ws = XLSX.utils.json_to_sheet(filtered);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Data Pasien");
-    XLSX.writeFile(wb, "data-pasien.xlsx");
-  };
+    body: filtered.map((p) => [
+      p.noRM,
+      p.nama,
+      p.nik,
+      p.jenisKelamin,
+      p.tanggalLahir
+        ? new Date(p.tanggalLahir).toLocaleDateString("id-ID")
+        : "-",
+      p.umur,
+      p.telepon,
+      p.alamat,
+      p.kecamatan,
+      p.kota
+    ]),
+
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
+
+    headStyles: {
+      fillColor: [59, 130, 246],
+    }
+  });
+
+  doc.save("data-pasien.pdf");
+};
+
+const exportExcel = () => {
+
+  const data = filtered.map((p) => ({
+    "No RM": p.noRM,
+    "Nama": p.nama,
+    "NIK": p.nik,
+    "Jenis Kelamin": p.jenisKelamin,
+    "Tanggal Lahir": p.tanggalLahir
+      ? new Date(p.tanggalLahir).toLocaleDateString("id-ID")
+      : "-",
+    "Tempat Lahir": p.tempatLahir,
+    "Umur": p.umur,
+    "Telepon": p.telepon,
+    "Alamat": p.alamat,
+    "Kecamatan": p.kecamatan,
+    "Kota": p.kota,
+    "Provinsi": p.provinsi,
+    "Status Perkawinan": p.statusPerkawinan,
+    "Pekerjaan": p.pekerjaan,
+    "Pendidikan": p.pendidikan,
+    "Nama Ayah": p.namaAyah,
+    "Pekerjaan Ayah": p.pekerjaanAyah,
+    "Nama Ibu": p.namaIbu,
+    "Pekerjaan Ibu": p.pekerjaanIbu,
+    "Nama KK": p.namaKK,
+    "Catatan": p.catatan
+  }));
+
+  const ws = XLSX.utils.json_to_sheet(data);
+ws["!autofilter"] = { ref: "A1:U1" };
+  // auto width kolom
+  ws["!cols"] = [
+    { wch: 10 }, // noRM
+    { wch: 18 }, // nama
+    { wch: 18 }, // nik
+    { wch: 15 },
+    { wch: 14 },
+    { wch: 15 },
+    { wch: 6 },
+    { wch: 14 },
+    { wch: 35 }, // alamat
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 18 },
+    { wch: 25 }
+  ];
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Data Pasien");
+
+  XLSX.writeFile(wb, "data-pasien.xlsx");
+};
 
 const [scanMode, setScanMode] = useState(false);
 
@@ -286,6 +376,26 @@ useEffect(() => {
   }
 }, [editData]);
 
+useEffect(() => {
+  if (!editData?.tanggalLahir) return;
+
+  const birthDate = new Date(editData.tanggalLahir);
+  const today = new Date();
+
+  let age = today.getFullYear() - birthDate.getFullYear();
+  const m = today.getMonth() - birthDate.getMonth();
+
+  if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+    age--;
+  }
+
+  setEditData((prev) => ({
+    ...prev,
+    umur: age
+  }));
+
+}, [editData?.tanggalLahir]);
+
 const handleSort = (key) => {
   if (sortKey === key) {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
@@ -349,9 +459,9 @@ const renderSortIcon = (key) => {
         </div>
 
 {/* TABLE */}
-<div className="bg-white rounded-xl shadow-sm w-full overflow-x-auto">
+<div className="bg-white rounded-xl shadow-sm w-full overflow-x-auto max-h-[420px] overflow-y-auto">
   <table className="w-full text-sm table-auto">
-    <thead className="bg-slate-100">
+    <thead className="bg-slate-100 sticky top-0 z-10">
       <tr>
         <th onClick={() => handleSort("noRM")} className="px-4 py-3 cursor-pointer select-none hover:text-blue-600 transition">
   <div className="flex items-center justify-center">
@@ -550,7 +660,8 @@ const renderSortIcon = (key) => {
     label="Umur"
     name="umur"
     value={editData.umur || ""}
-    onChange={handleEditChange}
+    disabled
+    className="rounded-xl border px-5 py-3.5 bg-slate-100"
   />
 
   {/* JENIS KELAMIN */}
