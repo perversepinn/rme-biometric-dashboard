@@ -14,7 +14,7 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Page from "../components/Page";
 import FaceScanner from "../components/FaceScanner";
-import { Fingerprint, Save } from "lucide-react";
+import { Fingerprint, Save, ArrowUp, ArrowDown } from "lucide-react";
 import wilayah from "../data/wilayah.json";
 
 export default function DataPasien({ auditLogs, setAuditLogs, user }) {
@@ -23,6 +23,10 @@ export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   const [detail, setDetail] = useState(null);
   const [editData, setEditData] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
+
+const [sortKey, setSortKey] = useState("noRM");
+const [sortOrder, setSortOrder] = useState("asc");
+
 const [provList] = useState(wilayah);
 const [kotaList, setKotaList] = useState([]);
 const [kecamatanList, setKecamatanList] = useState([]);
@@ -57,13 +61,27 @@ const getKecamatanCode = (provCode, kotaCode, name) => {
       .catch((err) => console.error("Gagal ambil data pasien", err));
   }, []);
 
-  const filtered = useMemo(() => {
-    return rows.filter(
-      (p) =>
-        p.nama.toLowerCase().includes(search.toLowerCase()) ||
-        p.nik.includes(search),
-    );
-  }, [rows, search]);
+const filtered = useMemo(() => {
+  const result = rows.filter(
+    (p) =>
+      (p.nama || "").toLowerCase().includes(search.toLowerCase()) ||
+      (p.nik || "").includes(search)
+  );
+
+  result.sort((a, b) => {
+    const valA = a[sortKey] || "";
+    const valB = b[sortKey] || "";
+
+    if (sortOrder === "asc") {
+      return valA.toString().localeCompare(valB.toString());
+    } else {
+      return valB.toString().localeCompare(valA.toString());
+    }
+  });
+
+  return result;
+}, [rows, search, sortKey, sortOrder]);
+
 const getProvinsiName = (code) => {
   const prov = provList.find((p) => p.code === code);
   return prov ? prov.name : code;
@@ -268,6 +286,40 @@ useEffect(() => {
   }
 }, [editData]);
 
+const handleSort = (key) => {
+  if (sortKey === key) {
+    setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+  } else {
+    setSortKey(key);
+    setSortOrder("asc");
+  }
+};
+
+const renderSortIcon = (key) => {
+  const isActive = sortKey === key;
+
+  return (
+    <span className="inline-flex flex-col ml-1">
+      <ArrowUp
+        size={12}
+        className={
+          isActive && sortOrder === "asc"
+            ? "text-blue-600"
+            : "text-slate-300"
+        }
+      />
+      <ArrowDown
+        size={12}
+        className={
+          isActive && sortOrder === "desc"
+            ? "text-blue-600"
+            : "text-slate-300 -mt-1"
+        }
+      />
+    </span>
+  );
+};
+
   return (
     <Page>
       <div className="space-y-6">
@@ -301,29 +353,72 @@ useEffect(() => {
   <table className="w-full text-sm table-auto">
     <thead className="bg-slate-100">
       <tr>
-        {["No RM", "Nama", "NIK", "Alamat", "Tanggal", "Aksi"].map((h) => (
-          <th key={h} className="px-4 py-3 text-left">
-            {h}
-          </th>
-        ))}
+        <th onClick={() => handleSort("noRM")} className="px-4 py-3 cursor-pointer select-none hover:text-blue-600 transition">
+  <div className="flex items-center justify-center">
+    No RM
+    {renderSortIcon("noRM")}
+  </div>
+</th>
+
+<th onClick={() => handleSort("nama")} className="px-4 py-3 cursor-pointer select-none hover:text-blue-600 transition">
+  <div className="flex items-center">
+    Nama
+    {renderSortIcon("nama")}
+  </div>
+</th>
+
+<th onClick={() => handleSort("nik")} className="px-4 py-3 cursor-pointer select-none hover:text-blue-600 transition">
+  <div className="flex items-center justify-center">
+    NIK
+    {renderSortIcon("nik")}
+  </div>
+</th>
+
+<th className="px-4 py-3 text-left">
+  Alamat
+</th>
+
+<th className="px-4 py-3 text-center">
+  Tgl Lahir
+</th>
+
+<th onClick={() => handleSort("umur")} className="px-4 py-3 cursor-pointer select-none hover:text-blue-600 transition" >
+  <div className="flex items-center justify-center">
+    Umur
+    {renderSortIcon("umur")}
+  </div>
+</th>
+
+<th className="px-4 py-3 text-center">
+  Aksi
+</th>
       </tr>
     </thead>
 
     <tbody>
       {filtered.map((p) => (
         <tr key={p.noRM} className="border-t hover:bg-slate-50 transition">
-          <td className="px-4 py-3">{p.noRM}</td>
-          <td className="px-4 py-3">{p.nama}</td>
-          <td className="px-4 py-3">{p.nik}</td>
-          <td className="px-4 py-3">{p.alamat}</td>
-          <td className="px-4 py-3">{p.tanggal || "-"}</td>
-          <td className="px-4 py-3 flex gap-2">
+          <td className="px-4 py-3 text-center">{p.noRM}</td>
+          <td className="px-4 py-3 text-left">{p.nama}</td>
+          <td className="px-4 py-3 text-center">{p.nik}</td>
+          <td className="px-4 py-3 text-left max-w-[200px] truncate" title={p.alamat}>
+  {p.alamat}
+</td>
+          <td className="px-4 py-3 text-center">
+  {p.tanggalLahir
+    ? new Date(p.tanggalLahir).toLocaleDateString("id-ID")
+    : "-"}
+</td>
+
+<td className="px-4 py-3 text-center">{p.umur || "-"}</td>
+          <td className="px-4 py-3 flex justify-center gap-2">
             <IconButton title="Detail" onClick={() => setDetail(p)}>
               <Eye />
             </IconButton>
 
 <IconButton
   title="Edit"
+  primary
   onClick={() => {
     const provCode = getProvinsiCode(p.provinsi);
     const kotaCode = getKotaCode(provCode, p.kota);
@@ -789,13 +884,15 @@ useEffect(() => {
 }
 
 /* ===== COMPONENTS ===== */
-function IconButton({ children, danger, ...props }) {
+function IconButton({ children, danger, primary, ...props }) {
   return (
     <button
       {...props}
       className={`p-2 rounded-lg border transition ${
         danger
           ? "text-red-600 hover:bg-red-50 border-red-200"
+          : primary
+          ? "text-blue-600 hover:bg-blue-50 border-blue-200"
           : "hover:bg-slate-100"
       }`}
     >
