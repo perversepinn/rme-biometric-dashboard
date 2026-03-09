@@ -4,6 +4,7 @@ import Page from "../components/Page";
 import { motion, AnimatePresence } from "framer-motion";
 import { Fingerprint, ScanFace, Loader2, X, CheckCircle } from "lucide-react";
 import wilayah from "../data/wilayah.json";
+import toast from "react-hot-toast";
 
 export default function Pendaftaran() {
   const [startFaceScan, setStartFaceScan] = useState(false);
@@ -18,6 +19,51 @@ export default function Pendaftaran() {
   const [faceDescriptor, setFaceDescriptor] = useState(null);
   const [showNoFaceModal, setShowNoFaceModal] = useState(false);
 
+  const [errors, setErrors] = useState({});
+
+const requiredFields = {
+  nama: "Nama Lengkap",
+  tempatLahir: "Tempat Lahir",
+  tanggalLahir: "Tanggal Lahir",
+  jenisKelamin: "Jenis Kelamin",
+  alamat: "Alamat",
+  provinsi: "Provinsi",
+  kota: "Kota / Kabupaten",
+  kecamatan: "Kecamatan",
+  telepon: "No. Telepon",
+};
+
+const [shakeKey, setShakeKey] = useState(0);
+
+const validateForm = () => {
+  const newErrors = {};
+
+  Object.keys(requiredFields).forEach((field) => {
+    if (!form[field]) {
+      newErrors[field] = true;
+    }
+  });
+
+  setErrors(newErrors);
+
+  if (Object.keys(newErrors).length > 0) {
+
+    // trigger ulang animasi shake
+    setShakeKey((prev) => prev + 1);
+
+    const firstError = Object.keys(newErrors)[0];
+
+    document
+      .querySelector(`[name="${firstError}"]`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    toast.error(`${requiredFields[firstError]} belum diisi`);
+
+    return false;
+  }
+
+  return true;
+};
 
   const [form, setForm] = useState({
     noRM: "",
@@ -127,7 +173,12 @@ const generateNewNoRM = async () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-
+if (errors[name]) {
+  setErrors((prev) => ({
+    ...prev,
+    [name]: false,
+  }));
+}
     if (name === "provinsi") {
       const selectedProv = provList.find((p) => p.code === value);
       setKotaList(selectedProv ? selectedProv.regencies : []);
@@ -151,6 +202,8 @@ const generateNewNoRM = async () => {
       }));
       return;
     }
+
+
 
     setForm((prev) => ({
       ...prev,
@@ -238,32 +291,43 @@ const handleSave = async () => {
   }
 };
 
-  const dropdown = (name, label, options) => (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-bold text-slate-700 ml-1">{label}</label>
-      <select
-        name={name}
-        value={form[name]}
-        onChange={handleChange}
-        className="rounded-xl border border-slate-200 px-5 py-3.5 bg-slate-50/30 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500"
-      >
-        <option value="">Pilih {label}</option>
-        {options.map((opt) => (
-          <option key={opt}>{opt}</option>
-        ))}
-        <option value="lainnya">Lainnya...</option>
-      </select>
-      {form[name] === "lainnya" && (
-        <input
-          type="text"
-          name={name}
-          placeholder={`Masukkan ${label}`}
-          className="mt-2 rounded-xl border border-slate-200 px-5 py-3 bg-white"
-          onChange={handleChange}
-        />
-      )}
-    </div>
-  );
+const dropdown = (name, label, options, required = false) => (
+  <div
+    key={`${name}-${shakeKey}`}
+    className={`flex flex-col gap-2 ${errors[name] ? "animate-shake" : ""}`}
+  >
+    <label className="text-sm font-bold text-slate-700 ml-1">
+      {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
+    </label>
+
+    <select
+      name={name}
+      value={form[name]}
+      onChange={handleChange}
+      className={`rounded-xl border px-5 py-3.5 transition-all
+      ${
+        errors[name]
+          ? "border-red-500 bg-red-50 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+          : "border-slate-200 focus:ring-blue-50 focus:border-blue-500"
+      }`}
+    >
+      <option value="">Pilih {label}</option>
+
+      {options.map((opt) => (
+        <option key={opt}>{opt}</option>
+      ))}
+
+      <option value="lainnya">Lainnya...</option>
+    </select>
+
+    {errors[name] && (
+      <span className="text-xs text-red-500 ml-1">
+        Field ini wajib diisi
+      </span>
+    )}
+  </div>
+);
 
   return (
     <Page>
@@ -295,58 +359,91 @@ const handleSave = async () => {
 
             {/* NAMA */}
             <Input
-              label="Nama Lengkap"
-              name="nama"
-              value={form.nama}
-              onChange={handleChange}
-            />
+  label="Nama Lengkap"
+  name="nama"
+  value={form.nama}
+  onChange={handleChange}
+  required
+  error={errors.nama}
+  shakeKey={shakeKey}
+/>
 
             {/* TEMPAT LAHIR */}
             <Input
-              label="Tempat Lahir"
-              name="tempatLahir"
-              value={form.tempatLahir}
-              onChange={handleChange}
-            />
+  label="Tempat Lahir"
+  name="tempatLahir"
+  value={form.tempatLahir}
+  onChange={handleChange}
+  required
+  error={errors.tempatLahir}
+  shakeKey={shakeKey}
+/>
 
             {/* TANGGAL LAHIR */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">
-                Tanggal Lahir
-              </label>
-              <input
-                type="date"
-                name="tanggalLahir"
-                value={form.tanggalLahir}
-                onChange={handleChange}
-                className="rounded-xl border px-5 py-3.5"
-              />
-            </div>
+            <div
+  key={`tanggalLahir-${shakeKey}`}
+  className={`flex flex-col gap-2 ${errors.tanggalLahir ? "animate-shake" : ""}`}
+>
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Tanggal Lahir <span className="text-red-500">*</span>
+  </label>
+
+  <input
+    type="date"
+    name="tanggalLahir"
+    value={form.tanggalLahir}
+    onChange={handleChange}
+    className={`rounded-xl border px-5 py-3.5 transition-all
+    ${
+      errors.tanggalLahir
+        ? "border-red-500 bg-red-50 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+        : "border-slate-200 focus:ring-blue-50 focus:border-blue-500"
+    }`}
+  />
+
+  {errors.tanggalLahir && (
+    <span className="text-xs text-red-500 ml-1">
+      Field ini wajib diisi
+    </span>
+  )}
+</div>
 
             {/* UMUR */}
             <Input label="Umur" name="umur" value={form.umur} disabled />
-
+            
             {dropdown("jenisKelamin", "Jenis Kelamin", [
               "Laki-laki",
               "Perempuan",
-            ])}
+            ], true)}
 
             <Input
-              label="Alamat"
-              name="alamat"
-              value={form.alamat}
-              onChange={handleChange}
-            />
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">
-                Provinsi
-              </label>
-              <select
-                name="provinsi"
-                value={form.provinsi}
-                onChange={handleChange}
-                className="rounded-xl border px-5 py-3.5"
-              >
+  label="Alamat"
+  name="alamat"
+  value={form.alamat}
+  onChange={handleChange}
+  required
+  error={errors.alamat}
+  shakeKey={shakeKey}
+/>
+            <div
+  key={`provinsi-${shakeKey}`}
+  className={`flex flex-col gap-2 ${errors.provinsi ? "animate-shake" : ""}`}
+>
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Provinsi <span className="text-red-500">*</span>
+  </label>
+
+  <select
+    name="provinsi"
+    value={form.provinsi}
+    onChange={handleChange}
+    className={`rounded-xl border px-5 py-3.5
+    ${
+      errors.provinsi
+        ? "border-red-500 bg-red-50 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+        : "border-slate-200"
+    }`}
+  >
                 <option value="">Pilih Provinsi</option>
                 {provList.map((p) => (
                   <option key={p.code} value={p.code}>
@@ -354,55 +451,95 @@ const handleSave = async () => {
                   </option>
                 ))}
               </select>
+              {errors.provinsi && (
+    <span className="text-xs text-red-500 ml-1">
+      Field ini wajib diisi
+    </span>
+  )}
             </div>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">
-                Kota / Kabupaten
-              </label>
-              <select
-                name="kota"
-                value={form.kota}
-                onChange={handleChange}
-                disabled={!kotaList.length}
-                className="rounded-xl border px-5 py-3.5"
-              >
-                <option value="">Pilih Kota/Kabupaten</option>
-                {kotaList.map((k) => (
-                  <option key={k.code} value={k.code}>
-                    {k.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <div
+  key={`kota-${shakeKey}`}
+  className={`flex flex-col gap-2 ${errors.kota ? "animate-shake" : ""}`}
+>
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Kota / Kabupaten <span className="text-red-500">*</span>
+  </label>
 
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-bold text-slate-700 ml-1">
-                Kecamatan
-              </label>
-              <select
-                name="kecamatan"
-                value={form.kecamatan}
-                onChange={handleChange}
-                disabled={!kecamatanList.length}
-                className="rounded-xl border px-5 py-3.5"
-              >
-                <option value="">Pilih Kecamatan</option>
-                {kecamatanList.map((kec) => (
-                  <option key={kec.code} value={kec.code}>
-                    {kec.name}
-                  </option>
-                ))}
-              </select>
-            </div>
+  <select
+    name="kota"
+    value={form.kota}
+    onChange={handleChange}
+    disabled={!kotaList.length}
+    className={`rounded-xl border px-5 py-3.5 transition-all
+    ${
+      errors.kota
+        ? "border-red-500 bg-red-50 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+        : "border-slate-200 focus:ring-blue-50 focus:border-blue-500"
+    }`}
+  >
+    <option value="">Pilih Kota/Kabupaten</option>
+
+    {kotaList.map((k) => (
+      <option key={k.code} value={k.code}>
+        {k.name}
+      </option>
+    ))}
+  </select>
+
+  {errors.kota && (
+    <span className="text-xs text-red-500 ml-1">
+      Field ini wajib diisi
+    </span>
+  )}
+</div>
+
+            <div
+  key={`kecamatan-${shakeKey}`}
+  className={`flex flex-col gap-2 ${errors.kecamatan ? "animate-shake" : ""}`}
+>
+  <label className="text-sm font-bold text-slate-700 ml-1">
+    Kecamatan <span className="text-red-500">*</span>
+  </label>
+
+  <select
+    name="kecamatan"
+    value={form.kecamatan}
+    onChange={handleChange}
+    disabled={!kecamatanList.length}
+    className={`rounded-xl border px-5 py-3.5 transition-all
+    ${
+      errors.kecamatan
+        ? "border-red-500 bg-red-50 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+        : "border-slate-200 focus:ring-blue-50 focus:border-blue-500"
+    }`}
+  >
+    <option value="">Pilih Kecamatan</option>
+
+    {kecamatanList.map((kec) => (
+      <option key={kec.code} value={kec.code}>
+        {kec.name}
+      </option>
+    ))}
+  </select>
+
+  {errors.kecamatan && (
+    <span className="text-xs text-red-500 ml-1">
+      Field ini wajib diisi
+    </span>
+  )}
+</div>
 
             <Input
-              label="No. Telepon"
-              name="telepon"
-              type="number"
-              value={form.telepon}
-              onChange={handleChange}
-            />
+  label="No. Telepon"
+  name="telepon"
+  type="number"
+  value={form.telepon}
+  onChange={handleChange}
+  required
+  error={errors.telepon}
+  shakeKey={shakeKey}
+/>
             {dropdown("agama", "Agama", [
               "Islam",
               "Kristen",
@@ -500,7 +637,10 @@ const handleSave = async () => {
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowModal(true)}
+                onClick={() => {
+  if (!validateForm()) return;
+  setShowModal(true);
+}}
                 className="flex items-center gap-3 px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all"
               >
                 <Fingerprint className="w-5 h-5" />
@@ -961,18 +1101,40 @@ function Input({
   disabled = false,
   value,
   onChange,
+  required = false,
+  error = false,
+  shakeKey
 }) {
   return (
-    <div className="flex flex-col gap-2">
-      <label className="text-sm font-bold text-slate-700 ml-1">{label}</label>
+    <div
+      key={`${name}-${shakeKey}`}
+      className={`flex flex-col gap-2 ${error ? "animate-shake" : ""}`}
+    >
+      <label className="text-sm font-bold text-slate-700 ml-1">
+        {label}
+        {required && <span className="text-red-500 ml-1">*</span>}
+      </label>
+
       <input
         type={type}
         name={name}
         value={value}
         onChange={onChange}
         disabled={disabled}
-        className="rounded-xl border border-slate-200 px-5 py-3.5 bg-slate-50/30 focus:outline-none focus:ring-4 focus:ring-blue-50 focus:border-blue-500"
+        className={`rounded-xl border px-5 py-3.5 bg-slate-50/30 transition-all
+        focus:outline-none focus:ring-4
+        ${
+          error
+            ? "border-red-500 bg-red-50 focus:ring-red-100 shadow-[0_0_0_3px_rgba(239,68,68,0.15)]"
+            : "border-slate-200 focus:ring-blue-50 focus:border-blue-500"
+        }`}
       />
+
+      {error && (
+        <span className="text-xs text-red-500 ml-1">
+          Field ini wajib diisi
+        </span>
+      )}
     </div>
   );
 }

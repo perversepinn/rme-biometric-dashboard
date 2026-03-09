@@ -15,7 +15,7 @@ import { motion } from "framer-motion";
 export default function Dashboard({ activeTab }) {
 
   const [biometricChart, setBiometricChart] = useState([]);
-
+const [chartKey, setChartKey] = useState(0);
 const totalBiometrik = biometricChart.reduce(
   (sum, item) => sum + item.value,
   0
@@ -64,14 +64,21 @@ const stats = [
 ];
 
 useEffect(() => {
-  fetch("http://127.0.0.1:5000/dashboard-stats")
-    .then(res => res.json())
-    .then(data => {
-      setStatsData(data.stats)
-      setBiometricChart(data.biometricChart)
-    })
-    .catch(err => console.error(err))
-}, [])
+  if (activeTab === "dashboard") {
+
+    fetch("http://127.0.0.1:5000/dashboard-stats")
+      .then(res => res.json())
+      .then(data => {
+        setStatsData(data.stats)
+        setBiometricChart(data.biometricChart)
+
+        // trigger re-render chart
+        setChartKey(prev => prev + 1)
+      })
+      .catch(err => console.error(err))
+
+  }
+}, [activeTab])
 
   return (
     <Page>
@@ -123,17 +130,18 @@ useEffect(() => {
     {/* CHART */}
     <div className="h-[420px]">
       <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-
+        <PieChart key={chartKey}>
           <Pie
-            data={biometricChart}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={120}
-            outerRadius={170}
-            paddingAngle={4}
-            stroke="none"
-          >
+  data={biometricChart}
+  dataKey="value"
+  nameKey="name"
+  innerRadius={120}
+  outerRadius={170}
+  paddingAngle={4}
+  stroke="none"
+  isAnimationActive={true}
+  animationDuration={1200}
+>
             {biometricChart.map((entry, index) => (
               <Cell
                 key={index}

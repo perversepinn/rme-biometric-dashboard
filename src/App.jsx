@@ -9,6 +9,7 @@ import AuditLog from "./pages/AuditLog";
 import Login from "./pages/Login";
 import { AnimatePresence, motion } from "framer-motion";
 import DummyFormPasien from "./pages/DummyFormPasien";
+import { Toaster } from "react-hot-toast";
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -22,6 +23,24 @@ export default function App() {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
+
+    {/* TOAST CONTAINER */}
+      <Toaster
+  position="top-center"
+  toastOptions={{
+    duration: 3000,
+    style: {
+      borderRadius: "16px",
+      backdropFilter: "blur(10px)",
+      background: "rgba(30,41,59,0.85)",
+      color: "#fff",
+      fontWeight: "600",
+      padding: "14px 20px",
+      boxShadow: "0 10px 30px rgba(0,0,0,0.2)"
+    }
+  }}
+/>
+      
       <Sidebar active={active} setActive={setActive} />
 
       <main className="flex-1 flex flex-col">
