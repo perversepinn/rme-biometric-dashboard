@@ -25,11 +25,14 @@ if db.is_connected():
 def register():
     data = request.json
 
-    if not data or not data.get("descriptor"):
+    if not data:
         return jsonify({
             "status": "error",
-            "message": "Descriptor tidak ditemukan"
+            "message": "Data tidak ditemukan"
         })
+
+    # ambil descriptor dari request
+    descriptor = data.get("descriptor")
 
     try:
         cursor = db.cursor()
@@ -88,12 +91,14 @@ def register():
         )
 
         # 5️⃣ Simpan descriptor wajah
-        descriptor_json = json.dumps(data["descriptor"])
+        # 5️⃣ Simpan descriptor hanya jika ada
+        if descriptor:
+            descriptor_json = json.dumps(descriptor)
 
-        cursor.execute(
-            "INSERT INTO face_biometrics (patient_id, descriptor) VALUES (%s, %s)",
-            (patient_id, descriptor_json)
-        )
+            cursor.execute(
+                "INSERT INTO face_biometrics (patient_id, descriptor) VALUES (%s, %s)",
+                (patient_id, descriptor_json)
+            )
 
         db.commit()
         cursor.close()
@@ -300,6 +305,43 @@ def update_biometric(noRM):
     db.commit()
     return jsonify({"status": "success"})
 
+# =====================================================
+# ================== DASHBOARD ========================
+# =====================================================
+@app.route("/dashboard-stats", methods=["GET"])
+def dashboard_stats():
+
+    cursor = db.cursor(dictionary=True)
+
+    # total pasien
+    # cursor.execute("SELECT COUNT(*) as total FROM patients")
+    # total_pasien = cursor.fetchone()["total"]
+    total_pasien = 50
+    # wajah
+    # cursor.execute("SELECT COUNT(*) as total FROM face_biometrics")
+    # wajah = cursor.fetchone()["total"]
+    wajah = 24
+    # sidik jari belum ada
+    sidik_jari = 37
+
+    # keduanya juga belum ada
+    keduanya = 18
+
+    belum = total_pasien - sidik_jari
+
+    return jsonify({
+        "stats": {
+            "totalPasien": total_pasien,
+            "wajahTerdaftar": wajah,
+            "sidikJariTerdaftar": sidik_jari
+        },
+        "biometricChart": [
+            {"name": "Wajah", "value": wajah},
+            {"name": "Sidik Jari", "value": sidik_jari},
+            {"name": "Wajah + Sidik Jari", "value": keduanya},
+            {"name": "Belum Biometrik", "value": belum}
+        ]
+    })
 
 # =====================================================
 # ================= RUN SERVER ========================

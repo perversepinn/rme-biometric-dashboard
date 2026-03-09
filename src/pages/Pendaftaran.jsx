@@ -16,6 +16,8 @@ export default function Pendaftaran() {
   const [showFaceModal, setShowFaceModal] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [faceDescriptor, setFaceDescriptor] = useState(null);
+  const [showNoFaceModal, setShowNoFaceModal] = useState(false);
+
 
   const [form, setForm] = useState({
     noRM: "",
@@ -197,14 +199,44 @@ const generateNewNoRM = async () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const simulateBiometricSuccess = () => {
-    setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setShowModal(false);
-      setFadeIn(true);
-    }, 2000);
+const handleSave = async () => {
+  const dataUntukDB = {
+    ...form,
+    provinsi: getProvinsiName(form.provinsi),
+    kota: getKotaName(form.provinsi, form.kota),
+    kecamatan: getKecamatanName(
+      form.provinsi,
+      form.kota,
+      form.kecamatan,
+    ),
   };
+
+  try {
+    const response = await fetch("http://127.0.0.1:5000/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        ...dataUntukDB,
+        descriptor: faceDescriptor || null,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (result.status === "success") {
+      setShowConfirmModal(false);
+      setShowNoFaceModal(false);
+      setShowSuccessModal(true);
+    } else {
+      alert("Gagal menyimpan: " + result.message);
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Server tidak dapat dihubungi");
+  }
+};
 
   const dropdown = (name, label, options) => (
     <div className="flex flex-col gap-2">
@@ -498,10 +530,18 @@ const generateNewNoRM = async () => {
                 {/* CLOSE BUTTON */}
                 <button
                   onClick={() => {
-                    setShowModal(false);
-                    setStartFaceScan(false); // 🔥 reset kamera
-                    setFaceVerified(false); // opsional: reset status wajah
-                  }}
+  setShowModal(false);
+
+  // reset kamera
+  setStartFaceScan(false);
+
+  // reset status biometrik
+  setFaceVerified(false);
+  setFingerVerified(false);
+
+  // opsional: reset descriptor juga
+  setFaceDescriptor(null);
+}}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
                 >
                   <X className="w-6 h-6" />
@@ -529,90 +569,110 @@ const generateNewNoRM = async () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                       {/* SIDIK JARI */}
                       <motion.div
-                        whileHover={{ y: -6 }}
-                        className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 hover:border-blue-300 transition-all group bg-gradient-to-br from-white to-blue-50"
-                      >
-                        <div className="w-full h-44 bg-white rounded-2xl flex items-center justify-center relative overflow-hidden shadow-inner">
-                          <Fingerprint className="w-20 h-20 text-blue-500 animate-pulse" />
-                        </div>
+  whileHover={{ y: -6 }}
+  className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 hover:border-blue-300 transition-all group bg-gradient-to-br from-white to-blue-50"
+>
 
-                        <button
-                          onClick={() => {
-                            setLoading(true);
-                            setTimeout(() => {
-                              setLoading(false);
-                              setFingerVerified(true);
-                            }, 2000);
-                          }}
-                          className="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                        >
-                          Scan Sidik Jari
-                        </button>
-                      </motion.div>
+  <div className="w-full h-44 bg-white rounded-2xl flex items-center justify-center relative overflow-hidden shadow-inner">
+
+    {!fingerVerified && (
+      <Fingerprint className="w-20 h-20 text-blue-500 animate-pulse" />
+    )}
+
+    {fingerVerified && (
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="flex flex-col items-center gap-2 text-green-600"
+      >
+        <CheckCircle className="w-10 h-10 animate-bounce" />
+        <p className="font-semibold">Sidik Jari Terverifikasi</p>
+      </motion.div>
+    )}
+
+  </div>
+
+  <button
+    onClick={() => {
+      setLoading(true);
+      setTimeout(() => {
+        setLoading(false);
+        setFingerVerified(true);
+      }, 2000);
+    }}
+    className="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+  >
+    {fingerVerified ? "Scan Ulang Sidik Jari" : "Scan Sidik Jari"}
+  </button>
+
+</motion.div>
 
                       {/* ====== WAJAH ====== */}
                       <motion.div
-                        whileHover={!faceVerified ? { y: -6 } : {}}
-                        className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
-                      >
-                        {!faceVerified ? (
-                          <>
-                            {/* ===== PREVIEW (SEBELUM SCAN) ===== */}
-                            <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
-                              <motion.div
-                                className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
-                                animate={{
-                                  scale: [1, 1.15, 1],
-                                  opacity: [0.6, 0.2, 0.6],
-                                }}
-                                transition={{
-                                  duration: 2.2,
-                                  repeat: Infinity,
-                                  ease: "easeInOut",
-                                }}
-                              />
+  whileHover={{ y: -6 }}
+  className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
+>
+  {/* PREVIEW AREA */}
+  <div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
+    
+    {!faceVerified && (
+      <>
+        <motion.div
+          className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
+          animate={{
+            scale: [1, 1.15, 1],
+            opacity: [0.6, 0.2, 0.6],
+          }}
+          transition={{
+            duration: 2.2,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+        />
 
-                              <motion.div
-                                className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
-                                animate={{ y: [0, 176, 0] }}
-                                transition={{
-                                  duration: 2.5,
-                                  repeat: Infinity,
-                                  ease: "linear",
-                                }}
-                              />
+        <motion.div
+          className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
+          animate={{ y: [0, 176, 0] }}
+          transition={{
+            duration: 2.5,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
 
-                              <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
-                            </div>
+        <ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse" />
+      </>
+    )}
 
-                            {/* TOMBOL INTERAKTIF */}
-                            <motion.button
-                              whileHover={{ scale: 1.04 }}
-                              whileTap={{ scale: 0.97 }}
-                              onClick={() => {
-                                setShowModal(false); // tutup modal biometrik utama
-                                setShowFaceModal(true); // buka modal kamera
-                              }}
-                              className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
-                            >
-                              Scan Wajah
-                            </motion.button>
+    {faceVerified && (
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        className="flex flex-col items-center gap-2 text-green-600"
+      >
+        <CheckCircle className="w-10 h-10 animate-bounce" />
+        <p className="font-semibold">Wajah Terverifikasi</p>
+      </motion.div>
+    )}
+  </div>
 
-                            <p className="text-sm text-slate-500 text-center">
-                              Gunakan kamera untuk verifikasi wajah pasien
-                            </p>
-                          </>
-                        ) : (
-                          <motion.div
-                            initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            className="flex items-center gap-2 text-green-600 font-semibold"
-                          >
-                            <CheckCircle className="w-6 h-6 animate-bounce" />
-                            Wajah Terverifikasi
-                          </motion.div>
-                        )}
-                      </motion.div>
+  {/* TOMBOL SCAN (TETAP ADA) */}
+  <motion.button
+    whileHover={{ scale: 1.04 }}
+    whileTap={{ scale: 0.97 }}
+    onClick={() => {
+      setShowModal(true);
+      setShowFaceModal(true);
+    }}
+    className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+  >
+    {faceVerified ? "Scan Ulang Wajah" : "Scan Wajah"}
+  </motion.button>
+
+  <p className="text-sm text-slate-500 text-center">
+    Gunakan kamera untuk verifikasi wajah pasien
+  </p>
+</motion.div>
                     </div>
 
                     {/* TOMBOL VERIFIKASI */}
@@ -706,13 +766,20 @@ const generateNewNoRM = async () => {
                 exit={{ scale: 0.9, opacity: 0, y: 40 }}
                 transition={{ type: "spring", damping: 20, stiffness: 260 }}
                 className="
-          bg-white rounded-3xl shadow-2xl w-full
-          max-w-3xl
-          max-h-[90vh]
-          overflow-y-auto
-          p-6 sm:p-8 md:p-10
-        "
+bg-white rounded-3xl shadow-2xl w-full
+max-w-3xl
+max-h-[90vh]
+overflow-y-auto
+p-6 sm:p-8 md:p-10
+relative
+"
               >
+                <button
+  onClick={() => setShowConfirmModal(false)}
+  className="absolute top-5 right-5 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition"
+>
+  <X className="w-6 h-6" />
+</button>
                 <h2 className="text-2xl font-bold text-slate-800 mb-6 text-center">
                   Konfirmasi Pendaftaran Pasien
                 </h2>
@@ -777,49 +844,14 @@ const generateNewNoRM = async () => {
                   </button>
 
                   <button
-                    onClick={async () => {
-                      if (!faceDescriptor) {
-                        alert("Wajah belum direkam");
-                        return;
-                      }
+                    onClick={() => {
+  if (!faceDescriptor) {
+    setShowNoFaceModal(true);
+    return;
+  }
 
-                      const dataUntukDB = {
-                        ...form,
-                        provinsi: getProvinsiName(form.provinsi),
-                        kota: getKotaName(form.provinsi, form.kota),
-                        kecamatan: getKecamatanName(
-                          form.provinsi,
-                          form.kota,
-                          form.kecamatan,
-                        ),
-                      };
-
-                      try {
-                        const response = await fetch(
-                          "http://127.0.0.1:5000/register",
-                          {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({
-                              ...dataUntukDB,
-                              descriptor: faceDescriptor,
-                            }),
-                          },
-                        );
-
-                        const result = await response.json();
-
-                        if (result.status === "success") {
-                          setShowConfirmModal(false);
-                          setShowSuccessModal(true);
-                        } else {
-                          alert("Gagal menyimpan: " + result.message);
-                        }
-                      } catch (err) {
-                        console.error(err);
-                        alert("Server tidak dapat dihubungi");
-                      }
-                    }}
+  handleSave();
+}}
                     className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
                   >
                     Simpan & Daftarkan
@@ -830,6 +862,55 @@ const generateNewNoRM = async () => {
           )}
         </AnimatePresence>
       </div>
+
+<AnimatePresence>
+  {showNoFaceModal && (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0, y: 40 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        exit={{ scale: 0.9, opacity: 0, y: 40 }}
+        transition={{ type: "spring", damping: 20, stiffness: 260 }}
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-md p-8 text-center"
+      >
+        <h2 className="text-xl font-bold text-slate-800 mb-3">
+          Wajah Belum Direkam
+        </h2>
+
+        <p className="text-slate-500 mb-6">
+          Data wajah pasien belum direkam.  
+          Apakah Anda ingin melanjutkan pendaftaran tanpa biometrik wajah?
+        </p>
+
+        <div className="flex gap-4">
+          <button
+            onClick={() => {
+              setShowNoFaceModal(false);
+              setShowConfirmModal(false);
+              setShowModal(true);
+            }}
+            className="flex-1 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+          >
+            Rekam Wajah
+          </button>
+
+          <button
+            onClick={handleSave}
+            className="flex-1 py-3 border rounded-xl font-semibold"
+          >
+            Lanjutkan
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
       <AnimatePresence>
         {showSuccessModal && (
           <motion.div
