@@ -57,37 +57,6 @@ Menampilkan ringkasan data seperti:
 
 ---
 
-# 📁 Struktur Project
-
-```
-rme-biometrik/
-│
-├── backend/
-│   ├── app.py
-│   └── requirements.txt
-│
-├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── FaceScanner.jsx
-│   │   │   ├── Sidebar.jsx
-│   │   │   └── Page.jsx
-│   │   │
-│   │   ├── pages/
-│   │   │   ├── Dashboard.jsx
-│   │   │   ├── DataPasien.jsx
-│   │   │   ├── Pendaftaran.jsx
-│   │   │   └── Login.jsx
-│   │   │
-│   │   └── App.jsx
-│   │
-│   └── package.json
-│
-└── README.md
-```
-
----
-
 # ⚙️ Instalasi
 
 ## 1️⃣ Clone Repository
@@ -95,6 +64,61 @@ rme-biometrik/
 ```bash
 git clone https://github.com/username/rme-biometrik.git
 cd rme-biometrik
+```
+
+---
+
+# 🗄️ Setup Database (MySQL)
+
+Project ini menggunakan **MySQL**.  
+Anda bisa menggunakan **Laragon** atau **XAMPP**.
+
+## Opsi 1 — Menggunakan Laragon
+
+1. Buka **Laragon**
+2. Klik **Start All**
+3. Buka **Menu → MySQL → HeidiSQL**
+4. Buat database baru:
+
+```
+rme_puskesmas
+```
+
+5. Import file database:
+
+- Klik kanan database `rme_puskesmas`
+- Pilih **Import SQL file**
+- Pilih file:
+
+```
+backend/rme_puskesmas.sql
+```
+
+---
+
+## Opsi 2 — Menggunakan XAMPP
+
+1. Jalankan **XAMPP Control Panel**
+2. Start **Apache** dan **MySQL**
+3. Buka browser:
+
+```
+http://localhost/phpmyadmin
+```
+
+4. Klik **New**
+5. Buat database:
+
+```
+rme_puskesmas
+```
+
+6. Pilih database tersebut
+7. Klik tab **Import**
+8. Upload file:
+
+```
+backend/rme_puskesmas.sql
 ```
 
 ---
@@ -111,6 +135,17 @@ Install dependencies:
 
 ```bash
 pip install flask flask-cors mysql-connector-python numpy
+```
+
+Pastikan konfigurasi database di `app.py`:
+
+```python
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="",
+    database="rme_puskesmas"
+)
 ```
 
 Jalankan server:
@@ -152,75 +187,6 @@ Frontend akan berjalan di:
 ```
 http://127.0.0.1:5173
 ```
-
----
-
-# 🗄️ Struktur Database
-
-Database yang digunakan: **MySQL**
-
-## Tabel `patients`
-
-| Field | Tipe |
-|------|------|
-| id | int |
-| noRM | varchar |
-| nama | varchar |
-| nik | varchar |
-| tempatLahir | varchar |
-| tanggalLahir | date |
-| umur | int |
-| jenisKelamin | varchar |
-| alamat | text |
-| kecamatan | varchar |
-| kota | varchar |
-| provinsi | varchar |
-| telepon | varchar |
-| agama | varchar |
-| statusPerkawinan | varchar |
-| pekerjaan | varchar |
-| pendidikan | varchar |
-| namaIbu | varchar |
-| pekerjaanIbu | varchar |
-| namaAyah | varchar |
-| pekerjaanAyah | varchar |
-| namaKK | varchar |
-| jkn | varchar |
-| catatan | text |
-
----
-
-## Tabel `face_biometrics`
-
-| Field | Tipe |
-|------|------|
-| id | int |
-| patient_id | int |
-| descriptor | JSON |
-
----
-
-# 🔎 Cara Kerja Face Recognition
-
-1. Kamera mengambil beberapa frame wajah pasien
-2. Sistem menghasilkan **face descriptor**
-3. Descriptor disimpan ke database
-4. Saat verifikasi:
-   - Descriptor baru dibandingkan dengan database
-   - Menggunakan **Euclidean Distance**
-5. Jika jarak < threshold → pasien teridentifikasi
-
----
-
-# 🚀 Pengembangan Selanjutnya
-
-Beberapa fitur yang dapat ditambahkan:
-
-- Scan sidik jari menggunakan sensor eksternal
-- Multi descriptor wajah untuk meningkatkan akurasi
-- Sistem login berbasis biometrik
-- Audit log aktivitas pengguna
-- Integrasi dengan sistem rekam medis nasional
 
 ---
 
