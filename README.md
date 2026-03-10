@@ -98,7 +98,7 @@ rme_puskesmas
 backend/rme_puskesmas.sql
 ```
 
-9. Klik **Go**
+9. Klik **Import**
 
 ---
 
@@ -127,7 +127,7 @@ rme_puskesmas
 backend/rme_puskesmas.sql
 ```
 
-9. Klik **Go**
+9. Klik **Import**
 
 ---
 
