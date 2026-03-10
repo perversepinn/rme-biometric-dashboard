@@ -62,8 +62,63 @@ Menampilkan ringkasan data seperti:
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/username/rme-biometrik.git
-cd rme-biometrik
+git clone https://github.com/perversepinn/rme-biometric-dashboard.git
+cd rme-biometric-dashboard
+```
+
+---
+
+# 🗄️ Setup Database (MySQL)
+
+Project ini menggunakan **MySQL**.  
+Anda bisa menggunakan **Laragon** atau **XAMPP**.
+
+## Opsi 1 — Menggunakan Laragon
+
+1. Buka **Laragon**
+2. Klik **Start All**
+3. Buka **Menu → MySQL → HeidiSQL**
+4. Buat database baru:
+
+```
+rme_puskesmas
+```
+
+5. Import file database:
+
+- Klik kanan database `rme_puskesmas`
+- Pilih **Import SQL file**
+- Pilih file:
+
+```
+backend/rme_puskesmas.sql
+```
+
+---
+
+## Opsi 2 — Menggunakan XAMPP
+
+1. Jalankan **XAMPP Control Panel**
+2. Start **Apache** dan **MySQL**
+3. Buka browser:
+
+```
+http://localhost/phpmyadmin
+```
+
+4. Klik **New**
+5. Buat database:
+
+```
+rme_puskesmas
+```
+
+6. Pilih database tersebut
+7. Klik tab **Import**
+8. Upload file:
+
+```
+backend/rme_puskesmas.sql
 ```
 
 ---
