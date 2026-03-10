@@ -62,8 +62,8 @@ Menampilkan ringkasan data seperti:
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/username/rme-biometrik.git
-cd rme-biometrik
+git clone https://github.com/perversepinn/rme-biometric-dashboard.git
+cd rme-biometric-dashboard
 ```
 
 ---
