@@ -77,22 +77,28 @@ Anda bisa menggunakan **Laragon** atau **XAMPP**.
 
 1. Buka **Laragon**
 2. Klik **Start All**
-3. Buka **Menu → MySQL → HeidiSQL**
-4. Buat database baru:
+3. Buka browser dan akses:
+
+```
+http://localhost/phpmyadmin
+```
+
+4. Klik **New**
+5. Buat database baru:
 
 ```
 rme_puskesmas
 ```
 
-5. Import file database:
-
-- Klik kanan database `rme_puskesmas`
-- Pilih **Import SQL file**
-- Pilih file:
+6. Klik database `rme_puskesmas`
+7. Pilih tab **Import**
+8. Upload file:
 
 ```
 backend/rme_puskesmas.sql
 ```
+
+9. Klik **Go**
 
 ---
 
@@ -121,60 +127,7 @@ rme_puskesmas
 backend/rme_puskesmas.sql
 ```
 
----
-
-# 🗄️ Setup Database (MySQL)
-
-Project ini menggunakan **MySQL**.  
-Anda bisa menggunakan **Laragon** atau **XAMPP**.
-
-## Opsi 1 — Menggunakan Laragon
-
-1. Buka **Laragon**
-2. Klik **Start All**
-3. Buka **Menu → MySQL → HeidiSQL**
-4. Buat database baru:
-
-```
-rme_puskesmas
-```
-
-5. Import file database:
-
-- Klik kanan database `rme_puskesmas`
-- Pilih **Import SQL file**
-- Pilih file:
-
-```
-backend/rme_puskesmas.sql
-```
-
----
-
-## Opsi 2 — Menggunakan XAMPP
-
-1. Jalankan **XAMPP Control Panel**
-2. Start **Apache** dan **MySQL**
-3. Buka browser:
-
-```
-http://localhost/phpmyadmin
-```
-
-4. Klik **New**
-5. Buat database:
-
-```
-rme_puskesmas
-```
-
-6. Pilih database tersebut
-7. Klik tab **Import**
-8. Upload file:
-
-```
-backend/rme_puskesmas.sql
-```
+9. Klik **Go**
 
 ---
 
@@ -219,10 +172,10 @@ http://127.0.0.1:5000
 
 # 💻 Setup Frontend (React)
 
-Masuk ke folder frontend:
+Masuk ke folder project:
 
 ```bash
-cd frontend
+cd rme-biometric-dashboard
 ```
 
 Install dependencies:
