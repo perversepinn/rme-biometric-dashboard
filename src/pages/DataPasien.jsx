@@ -14,8 +14,9 @@ import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 import Page from "../components/Page";
 import FaceScanner from "../components/FaceScanner";
-import { Fingerprint, Save, ArrowUp, ArrowDown } from "lucide-react";
+import { Fingerprint, Save, ArrowUp, ArrowDown, ScanFace } from "lucide-react";
 import wilayah from "../data/wilayah.json";
+import { toast } from "react-hot-toast";
 
 export default function DataPasien({ auditLogs, setAuditLogs, user }) {
   const [rows, setRows] = useState([]);
@@ -154,6 +155,7 @@ const saveEdit = async () => {
       )
 
       setEditData(null)
+      toast.success("Data pasien berhasil diperbarui")
     }
 
   } catch (err) {
@@ -291,9 +293,10 @@ ws["!autofilter"] = { ref: "A1:U1" };
   XLSX.writeFile(wb, "data-pasien.xlsx");
 };
 
-const [scanMode, setScanMode] = useState(false);
 
-const [showRescan, setShowRescan] = useState(null);
+const [showBiometricModal, setShowBiometricModal] = useState(null);
+const [showFaceScan, setShowFaceScan] = useState(false);
+
 
   const fieldOrder = [
   "noRM",
@@ -499,6 +502,10 @@ const renderSortIcon = (key) => {
   </div>
 </th>
 
+<th className="px-1 py-3 text-center">
+  Biometrik
+</th>
+
 <th className="px-4 py-3 text-center">
   Aksi
 </th>
@@ -521,6 +528,17 @@ const renderSortIcon = (key) => {
 </td>
 
 <td className="px-4 py-3 text-center">{p.umur || "-"}</td>
+
+<td className="px-4 py-3 text-center">
+  <div className="flex justify-center">
+    {p.descriptor ? (
+      <span className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.7)]"></span>
+    ) : (
+      <span className="w-3 h-3 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.7)]"></span>
+    )}
+  </div>
+</td>
+
           <td className="px-4 py-3 flex justify-center gap-2">
             <IconButton title="Detail" onClick={() => setDetail(p)}>
               <Eye />
@@ -581,6 +599,46 @@ const renderSortIcon = (key) => {
         <AnimatePresence>
 {detail && (
   <Modal title="Detail Pasien" onClose={() => setDetail(null)}>
+    {/* STATUS BIOMETRIK */}
+<div className="grid grid-cols-2 gap-4 mb-6">
+
+  {/* WAJAH */}
+  <div className="flex items-center justify-between border rounded-lg p-3 bg-slate-50">
+    <span className="text-slate-500">Biometrik Wajah</span>
+
+    {detail?.descriptor ? (
+      <span className="flex items-center gap-2 text-green-600 font-semibold">
+        <ScanFace size={16}/>
+        Tersedia
+      </span>
+    ) : (
+      <span className="flex items-center gap-2 text-red-500 font-semibold">
+        <ScanFace size={16}/>
+        Belum Ada
+      </span>
+    )}
+
+  </div>
+
+  {/* SIDIK JARI */}
+  <div className="flex items-center justify-between border rounded-lg p-3 bg-slate-50">
+    <span className="text-slate-500">Sidik Jari</span>
+
+    {detail?.fingerprint ? (
+      <span className="flex items-center gap-2 text-green-600 font-semibold">
+        <Fingerprint size={16}/>
+        Tersedia
+      </span>
+    ) : (
+      <span className="flex items-center gap-2 text-red-500 font-semibold">
+        <Fingerprint size={16}/>
+        Belum Ada
+      </span>
+    )}
+
+  </div>
+
+</div>
    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[60vh] overflow-y-auto pr-2">
       {fieldOrder.map((key) => {
   const value = detail?.[key];
@@ -897,13 +955,123 @@ const renderSortIcon = (key) => {
   </div>
 
 </div>
+{showBiometricModal && (
+<motion.div
+className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-6"
+initial={{ opacity: 0 }}
+animate={{ opacity: 1 }}
+exit={{ opacity: 0 }}
+>
 
+<motion.div
+initial={{ opacity: 0, scale: 0.85, y: 60 }}
+animate={{ opacity: 1, scale: 1, y: 0 }}
+exit={{ opacity: 0, scale: 0.85, y: 60 }}
+transition={{ type: "spring", damping: 22, stiffness: 260 }}
+className="bg-white rounded-[36px] w-full max-w-4xl p-12 relative shadow-2xl overflow-hidden"
+>
+
+<button
+onClick={() => setShowBiometricModal(null)}
+className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
+>
+<X className="w-6 h-6"/>
+</button>
+
+<div className="mb-12 text-center">
+<h2 className="text-3xl font-bold text-slate-800">
+Otentikasi Biometrik
+</h2>
+<p className="text-slate-500 mt-3">
+Pilih metode identifikasi pasien
+</p>
+</div>
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+
+{/* SIDIK JARI */}
+<motion.div
+whileHover={{ y: -6 }}
+className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 hover:border-blue-300 transition-all group bg-gradient-to-br from-white to-blue-50"
+>
+
+<div className="w-full h-44 bg-white rounded-2xl flex items-center justify-center relative overflow-hidden shadow-inner">
+
+<Fingerprint className="w-20 h-20 text-blue-500 animate-pulse"/>
+
+</div>
+
+<button
+onClick={() => alert("Scanner sidik jari belum tersedia")}
+className="w-full py-3 bg-white border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+>
+Scan Sidik Jari
+</button>
+
+</motion.div>
+
+{/* WAJAH */}
+<motion.div
+whileHover={{ y: -6 }}
+className="border border-slate-200 rounded-3xl p-8 flex flex-col items-center gap-6 bg-gradient-to-br from-white to-slate-50 hover:border-blue-300 transition-all"
+>
+
+<div className="relative w-full h-44 rounded-2xl bg-white shadow-inner overflow-hidden flex items-center justify-center">
+
+<motion.div
+className="absolute w-28 h-28 rounded-full border-2 border-blue-300"
+animate={{
+scale:[1,1.15,1],
+opacity:[0.6,0.2,0.6]
+}}
+transition={{
+duration:2.2,
+repeat:Infinity,
+ease:"easeInOut"
+}}
+/>
+
+<motion.div
+className="absolute top-0 left-0 w-full h-1 bg-blue-400/70"
+animate={{y:[0,176,0]}}
+transition={{
+duration:2.5,
+repeat:Infinity,
+ease:"linear"
+}}
+/>
+
+<ScanFace className="w-20 h-20 text-blue-500 z-10 animate-pulse"/>
+
+</div>
+
+<button
+onClick={()=>{
+setShowBiometricModal(null)
+setShowFaceScan(true)
+}}
+className="w-full py-3 border-2 border-blue-600 text-blue-600 font-bold rounded-xl hover:bg-blue-600 hover:text-white transition-all shadow-sm"
+>
+Scan Wajah
+</button>
+
+<p className="text-sm text-slate-500 text-center">
+Gunakan kamera untuk verifikasi wajah pasien
+</p>
+
+</motion.div>
+
+</div>
+
+</motion.div>
+</motion.div>
+)}
     {/* BUTTON SECTION */}
 <div className="flex gap-3 mt-6">
 
   {/* SCAN ULANG */}
   <button
-    onClick={() => setShowRescan(editData)}
+    onClick={() => setShowBiometricModal(editData)}
     className="flex items-center justify-center gap-2 flex-1 
     border border-purple-500 text-purple-600 py-3 rounded-xl font-semibold 
     transition-all duration-200 
@@ -955,36 +1123,61 @@ const renderSortIcon = (key) => {
             </Modal>
           )}
         </AnimatePresence>
-        {showRescan && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div className="bg-white rounded-2xl p-6 w-full max-w-3xl relative">
-      <h2 className="text-lg font-semibold mb-4 text-center">
-        Scan Ulang Biometrik
+        {showFaceScan && (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="bg-white rounded-3xl w-full max-w-4xl p-10 shadow-2xl relative">
+
+      <button
+        onClick={() => setShowFaceScan(false)}
+        className="absolute top-4 right-4"
+      >
+        <X />
+      </button>
+
+      <h2 className="text-xl font-semibold text-center mb-6">
+        Perekaman Wajah Pasien
       </h2>
 
       <FaceScanner
         mode="register"
         onComplete={async (descriptor) => {
-          await fetch(
-            `http://127.0.0.1:5000/update-biometric/${showRescan.noRM}`,
-            {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ descriptor }),
-            }
-          );
 
-          setShowRescan(null);
-          alert("Biometrik berhasil diperbarui");
-        }}
+  const res = await fetch(
+    `http://127.0.0.1:5000/update-biometric/${editData.noRM}`,
+    {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ descriptor })
+    }
+  )
+
+  const result = await res.json()
+
+  if (result.status === "success") {
+
+    setRows(prev =>
+      prev.map(p =>
+        p.noRM === editData.noRM
+          ? { ...p, descriptor }
+          : p
+      )
+    )
+
+    if (detail) {
+      setDetail(prev => ({
+        ...prev,
+        descriptor
+      }))
+    }
+
+    setShowFaceScan(false)
+
+    toast.success("Biometrik wajah berhasil diperbarui")
+  }
+
+}}
       />
 
-      <button
-        onClick={() => setShowRescan(null)}
-        className="absolute top-4 right-4"
-      >
-        <X />
-      </button>
     </div>
   </div>
 )}

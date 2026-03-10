@@ -7,7 +7,7 @@ export default function Sidebar({ active, setActive }) {
     { key: "pendaftaranPasien", label: "Pendaftaran Pasien", icon: UserCheck }, // BARU
     { key: "pendaftaran", label: "Pendaftaran Biometrik", icon: UserPlus },
     { key: "pasien", label: "Data Pasien", icon: Users },
-    { key: "audit", label: "Audit Log", icon: ClipboardList },
+    // { key: "audit", label: "Audit Log", icon: ClipboardList },
     { key: "dummyForm", label: "Form Dummy Pasien", icon: ClipboardList }, 
   ];
 

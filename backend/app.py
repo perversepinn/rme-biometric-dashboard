@@ -200,12 +200,17 @@ def get_patients():
     cursor = db.cursor(dictionary=True)
 
     cursor.execute("""
-        SELECT *
-        FROM patients
-        ORDER BY id DESC
+        SELECT p.*, f.descriptor
+        FROM patients p
+        LEFT JOIN face_biometrics f 
+        ON p.id = f.patient_id
+        ORDER BY p.id DESC
     """)
 
-    return jsonify(cursor.fetchall())
+    patients = cursor.fetchall()
+    cursor.close()
+
+    return jsonify(patients)
 
 
 # tabel data pasien
@@ -290,19 +295,46 @@ def delete_patient(noRM):
 
 @app.route("/update-biometric/<noRM>", methods=["PUT"])
 def update_biometric(noRM):
+
     data = request.json
     descriptor_json = json.dumps(data["descriptor"])
+
     cursor = db.cursor()
 
-    cursor.execute("""
-        UPDATE face_biometrics
-        SET descriptor=%s
-        WHERE patient_id = (
-            SELECT id FROM patients WHERE noRM=%s
+    # cari patient id
+    cursor.execute(
+        "SELECT id FROM patients WHERE noRM=%s",
+        (noRM,)
+    )
+    patient = cursor.fetchone()
+
+    if not patient:
+        return jsonify({"status": "error", "message": "Patient tidak ditemukan"})
+
+    patient_id = patient[0]
+
+    # cek apakah sudah ada biometrik
+    cursor.execute(
+        "SELECT id FROM face_biometrics WHERE patient_id=%s",
+        (patient_id,)
+    )
+
+    existing = cursor.fetchone()
+
+    if existing:
+        cursor.execute(
+            "UPDATE face_biometrics SET descriptor=%s WHERE patient_id=%s",
+            (descriptor_json, patient_id)
         )
-    """, (descriptor_json, noRM))
+    else:
+        cursor.execute(
+            "INSERT INTO face_biometrics (patient_id, descriptor) VALUES (%s,%s)",
+            (patient_id, descriptor_json)
+        )
 
     db.commit()
+    cursor.close()
+
     return jsonify({"status": "success"})
 
 # =====================================================
@@ -314,20 +346,22 @@ def dashboard_stats():
     cursor = db.cursor(dictionary=True)
 
     # total pasien
-    # cursor.execute("SELECT COUNT(*) as total FROM patients")
-    # total_pasien = cursor.fetchone()["total"]
-    total_pasien = 50
+    cursor.execute("SELECT COUNT(*) as total FROM patients")
+    total_pasien = cursor.fetchone()["total"]
+    # total_pasien = 50
+
     # wajah
-    # cursor.execute("SELECT COUNT(*) as total FROM face_biometrics")
-    # wajah = cursor.fetchone()["total"]
-    wajah = 24
+    cursor.execute("SELECT COUNT(*) as total FROM face_biometrics")
+    wajah = cursor.fetchone()["total"]
+    # wajah = 24
+    
     # sidik jari belum ada
-    sidik_jari = 37
+    sidik_jari = 0
 
     # keduanya juga belum ada
-    keduanya = 18
+    keduanya = 0
 
-    belum = total_pasien - sidik_jari
+    belum = total_pasien - wajah
 
     return jsonify({
         "stats": {

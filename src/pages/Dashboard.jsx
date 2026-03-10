@@ -137,9 +137,11 @@ useEffect(() => {
   nameKey="name"
   innerRadius={120}
   outerRadius={170}
-  paddingAngle={4}
-  stroke="none"
-  isAnimationActive={true}
+  stroke="#ffffff"
+  strokeWidth={8}
+  startAngle={90}
+  endAngle={-270}
+  isAnimationActive
   animationDuration={1200}
 >
             {biometricChart.map((entry, index) => (

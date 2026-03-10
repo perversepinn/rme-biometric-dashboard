@@ -670,18 +670,18 @@ const dropdown = (name, label, options, required = false) => (
                 {/* CLOSE BUTTON */}
                 <button
                   onClick={() => {
-  setShowModal(false);
+                setShowModal(false);
 
-  // reset kamera
-  setStartFaceScan(false);
+                // reset kamera
+                setStartFaceScan(false);
 
-  // reset status biometrik
-  setFaceVerified(false);
-  setFingerVerified(false);
+                // reset status biometrik
+                setFaceVerified(false);
+                setFingerVerified(false);
 
-  // opsional: reset descriptor juga
-  setFaceDescriptor(null);
-}}
+                // opsional: reset descriptor juga
+                setFaceDescriptor(null);
+              }}
                   className="absolute top-6 right-6 p-2 rounded-full hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-all"
                 >
                   <X className="w-6 h-6" />
@@ -814,7 +814,22 @@ const dropdown = (name, label, options, required = false) => (
   </p>
 </motion.div>
                     </div>
-
+<div className="mt-8 text-center">
+  <button
+    onClick={() => {
+      setShowModal(false);
+      setShowConfirmModal(true);
+    }}
+    className="
+      text-slate-400 hover:text-slate-600
+      text-sm font-medium
+      transition
+      underline underline-offset-4
+    "
+  >
+    Lewati perekaman biometrik
+  </button>
+</div>
                     {/* TOMBOL VERIFIKASI */}
                     {(fingerVerified || faceVerified) && (
                       <motion.button
