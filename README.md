@@ -91,7 +91,7 @@ rme_puskesmas
 - Pilih file:
 
 ```
-backend/database.sql
+backend/rme_puskesmas.sql
 ```
 
 ---
@@ -118,7 +118,7 @@ rme_puskesmas
 8. Upload file:
 
 ```
-backend/database.sql
+backend/rme_puskesmas.sql
 ```
 
 ---
