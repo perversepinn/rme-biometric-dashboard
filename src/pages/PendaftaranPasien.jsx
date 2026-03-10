@@ -43,6 +43,7 @@ export default function PendaftaranPasien({ setActive, setSelectedPatient, }) {
   /* =========================
      CALLBACK SCANNER
      ========================= */
+  const [showFaceNotFound, setShowFaceNotFound] = useState(false);
   const handleScanComplete = async (descriptor) => {
     try {
       const res = await fetch("http://127.0.0.1:5000/verify-face", {
@@ -65,11 +66,11 @@ if (result.status === "success") {
   setDetectedPatient(patientData);
   setShowConfirm(true);
 } else {
-        alert("Wajah belum terdaftar");
-      }
+  setShowFaceNotFound(true);
+}
     } catch (err) {
-      alert("Server tidak dapat dihubungi");
-    }
+  setShowFaceNotFound(true);
+}
   };
 
 return (
@@ -268,7 +269,43 @@ return (
         </motion.div>
       )}
     </AnimatePresence>
+    
+{/* ================= WAJAH TIDAK TERDAFTAR ================= */}
+<AnimatePresence>
+  {showFaceNotFound && (
+    <motion.div
+      className="fixed inset-0 bg-black/50 flex items-center justify-center z-50"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+        initial={{ scale: 0.85, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.85, opacity: 0 }}
+        className="bg-white rounded-3xl p-10 text-center shadow-2xl max-w-md w-full"
+      >
+        <ScanFace className="w-16 h-16 text-red-500 mx-auto mb-4" />
 
+        <h2 className="text-xl font-bold text-slate-800 mb-2">
+          Wajah Tidak Dikenali
+        </h2>
+
+        <p className="text-slate-500 mb-6">
+          Wajah pasien belum terdaftar dalam sistem.  
+          Silakan lakukan pendaftaran pasien baru.
+        </p>
+
+        <button
+          onClick={() => setShowFaceNotFound(false)}
+          className="px-6 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700"
+        >
+          Tutup
+        </button>
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
     {/* ================= CSS ANIMASI (TIDAK DIUBAH) ================= */}
     <style>{`
         @keyframes scanFace {
