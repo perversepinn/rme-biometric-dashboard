@@ -7,7 +7,7 @@ export default function FaceScanner({ onComplete, mode = "register" }) {
   const streamRef = useRef(null);
   const cooldownRef = useRef(false);
   
-const maxPose = mode === "verify" ? 1 : 5;
+const maxPose = mode === "verify" ? 1 : 3;
 
   const [faceDetected, setFaceDetected] = useState(false);
   const [faceCentered, setFaceCentered] = useState(false);
@@ -21,8 +21,6 @@ const maxPose = mode === "verify" ? 1 : 5;
     "Hadap lurus ke kamera",
     "Hadap sedikit ke kanan",
     "Hadap sedikit ke kiri",
-    "Hadap sedikit ke atas",
-    "Hadap sedikit ke bawah",
   ];
 
   // ================= LOAD MODELS =================
@@ -141,27 +139,24 @@ const inCenter =
 
 if (mode === "register") {
   switch (count) {
-    case 0:
-      poseCorrect = Math.abs(yaw) < 0.35 && pitch > 0.6 && pitch < 1.8;
-      break;
-    case 1:
-      poseCorrect = yaw < -0.12;
-      break;
-    case 2:
-      poseCorrect = yaw > 0.12;
-      break;
-    case 3:
+  case 0:
     poseCorrect =
-      pitch > 1.4 &&
-      pitch < 2.2 &&
-      Math.abs(yaw) < 0.15;
+      Math.abs(yaw) < 0.35 &&
+      pitch > 0.6 &&
+      pitch < 1.8;
     break;
-    case 4:
-      poseCorrect = pitch < 1.05;
-      break;
-    default:
-      break;
-  }
+
+  case 1:
+    poseCorrect = yaw < -0.12;
+    break;
+
+  case 2:
+    poseCorrect = yaw > 0.12;
+    break;
+
+  default:
+    break;
+}
 }
 
 
