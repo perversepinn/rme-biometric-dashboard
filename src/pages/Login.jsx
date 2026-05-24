@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Lock, User } from "lucide-react";
+import { Lock, User, Eye, EyeOff } from "lucide-react";
 
 export default function Login({ onLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
@@ -26,6 +27,7 @@ export default function Login({ onLogin }) {
         <h1 className="text-2xl font-semibold text-center mb-2">
           Login RME
         </h1>
+
         <p className="text-center text-slate-500 mb-6">
           Sistem Rekam Medis Elektronik Puskesmas
         </p>
@@ -37,8 +39,10 @@ export default function Login({ onLogin }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* USERNAME */}
           <div className="relative">
             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
             <input
               type="text"
               placeholder="Username"
@@ -48,15 +52,29 @@ export default function Login({ onLogin }) {
             />
           </div>
 
+          {/* PASSWORD */}
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+
             <input
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+              className="w-full pl-9 pr-10 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             />
+
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              {showPassword ? (
+                <EyeOff className="w-4 h-4" />
+              ) : (
+                <Eye className="w-4 h-4" />
+              )}
+            </button>
           </div>
 
           <button
